@@ -4,6 +4,7 @@ import com.reap.ReapData;
 import com.reap.ReapMod;
 import com.reap.ReapNet;
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.block.Block;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -18,7 +19,7 @@ import java.util.UUID;
 public class ReapClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        BlockRenderLayerMap.INSTANCE.putBlock(ReapMod.GOO, RenderLayer.getTranslucent());
+        for (Block b : ReapMod.JELLY) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
 
         ClientPlayNetworking.registerGlobalReceiver(ReapNet.SYNC, (client, handler, buf, sender) -> {
             UUID id = buf.readUuid();
@@ -31,7 +32,8 @@ public class ReapClient implements ClientModInitializer {
             UUID owner = buf.readUuid();
             int amount = buf.readVarInt();
             int kind = buf.readByte();
-            client.execute(() -> Fx.onCut(x, y, z, owner, amount, kind));
+            int tier = buf.readByte();
+            client.execute(() -> Fx.onCut(x, y, z, owner, amount, kind, tier));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(ReapNet.LEVEL_UP, (client, handler, buf, sender) -> {

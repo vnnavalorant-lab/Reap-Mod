@@ -1,5 +1,6 @@
 package com.reap.client;
 
+import com.reap.ReapMod;
 import net.minecraft.util.math.MathHelper;
 
 /** Cores por tier de rebirth. Tier 0 = colher branca com rastro ciano (igual ao vídeo). */
@@ -16,6 +17,19 @@ final class Palette {
     static float[] trail(int rebirths) {
         int t = rebirths % HUES.length;
         return t == 0 ? new float[]{0.45f, 0.88f, 1f} : rgb(HUES[t], 0.75f, 1f);
+    }
+
+    /** Cor dos respingos de cada tipo de gelatina (a preta é clareada para os respingos aparecerem). */
+    static float[] goo(int tier) {
+        int t = Math.max(0, Math.min(ReapMod.TYPES.length - 1, tier));
+        int c = ReapMod.TYPES[t].rgb();
+        float[] f = {((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f};
+        float lum = 0.3f * f[0] + 0.59f * f[1] + 0.11f * f[2];
+        if (lum < 0.3f) {
+            float k = 0.45f;
+            for (int i = 0; i < 3; i++) f[i] = f[i] + (1f - f[i]) * k;
+        }
+        return f;
     }
 
     private static float[] rgb(float h, float s, float v) {

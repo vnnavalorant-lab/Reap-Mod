@@ -1,1 +1,1 @@
-{"variants":{"":{"model":"reap:block/goo"}}}
+{"variants":{"bites=0":{"model":"reap:block/goo_bites_0"},"bites=1":{"model":"reap:block/goo_bites_1"},"bites=2":{"model":"reap:block/goo_bites_2"},"bites=3":{"model":"reap:block/goo_bites_3"},"bites=4":{"model":"reap:block/goo_bites_4"},"bites=5":{"model":"reap:block/goo_bites_5"},"bites=6":{"model":"reap:block/goo_bites_6"},"bites=7":{"model":"reap:block/goo_bites_7"}}}

@@ -5,7 +5,11 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.block.*;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.MapColor;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -34,28 +38,64 @@ import java.util.*;
 public class ReapMod implements ModInitializer {
     public static final String ID = "reap";
     public static final int REBIRTH_LEVEL = 50;
+
+    /** Ticks até a gelatina voltar depois de devorada (+ 40 por tier). */
     public static final int GOO_REGEN_TICKS = 200;
+    /** Ticks sem ninguém comendo até a gelatina começar a se recuperar sozinha. */
+    public static final int CHEW_IDLE_TICKS = 50;
+    /** Fração do HP recuperada por tick quando ninguém está comendo (0.04 = ~1,2 s para curar tudo). */
+    public static final float HEAL_PER_TICK = 0.04f;
 
-    public static Block GOO;
+    /**
+     * As 9 gelatinas, da mais fácil para a mais difícil.
+     * id = nome do bloco (precisa bater com tools/gen_assets.py), hp = "vida" da gelatina,
+     * reward = moedas/XP base ao devorar (multiplicadas pelo multiplicador do jogador).
+     */
+    public record JellyType(String id, int rgb, int hp, int reward, MapColor map) {}
 
-    private record Regen(RegistryKey<World> dim, BlockPos pos, long at) {}
+    public static final JellyType[] TYPES = {
+            new JellyType("goo",        0xFF54BC,    6,   1, MapColor.PINK),     // rosa (a original)
+            new JellyType("goo_red",    0xE8243A,   14,   3, MapColor.RED),
+            new JellyType("goo_orange", 0xFF8A1C,   32,   7, MapColor.ORANGE),
+            new JellyType("goo_yellow", 0xFFD628,   70,  16, MapColor.YELLOW),
+            new JellyType("goo_green",  0x40D648,  150,  36, MapColor.LIME),
+            new JellyType("goo_cyan",   0x2CD6EC,  320,  80, MapColor.CYAN),
+            new JellyType("goo_blue",   0x3A62FF,  680, 180, MapColor.BLUE),
+            new JellyType("goo_purple", 0x9442EA, 1400, 400, MapColor.PURPLE),
+            new JellyType("goo_black",  0x342E54, 2900, 900, MapColor.BLACK),
+    };
+
+    public static final Block[] JELLY = new Block[TYPES.length];
+
+    private record Regen(RegistryKey<World> dim, BlockPos pos, long at, int tier) {}
+    private record Key(RegistryKey<World> dim, long pos) {}
+    /** Dano acumulado numa gelatina que está sendo devorada. */
+    private static final class Chew { float dmg; long last; }
 
     private static final List<Regen> REGEN = new ArrayList<>();
+    private static final Map<Key, Chew> CHEW = new HashMap<>();
     private static final Set<UUID> DIRTY = new HashSet<>();
     private static final Random RNG = new Random();
 
     @Override
     public void onInitialize() {
-        GOO = Registry.register(Registries.BLOCK, new Identifier(ID, "goo"),
-                new GlassBlock(AbstractBlock.Settings.create()
-                        .mapColor(MapColor.PINK)
-                        .strength(0.4f)
-                        .sounds(BlockSoundGroup.SLIME)
-                        .nonOpaque()
-                        .suffocates((s, w, p) -> false)
-                        .blockVision((s, w, p) -> false)));
-        Registry.register(Registries.ITEM, new Identifier(ID, "goo"), new BlockItem(GOO, new Item.Settings()));
-        ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(e -> e.add(GOO));
+        for (int i = 0; i < TYPES.length; i++) {
+            JellyType t = TYPES[i];
+            Block b = Registry.register(Registries.BLOCK, new Identifier(ID, t.id()),
+                    new JellyBlock(AbstractBlock.Settings.create()
+                            .mapColor(t.map())
+                            .strength(0.4f)
+                            .sounds(BlockSoundGroup.SLIME)
+                            .nonOpaque()
+                            .ticksRandomly()
+                            .suffocates((s, w, p) -> false)
+                            .blockVision((s, w, p) -> false), i));
+            Registry.register(Registries.ITEM, new Identifier(ID, t.id()), new BlockItem(b, new Item.Settings()));
+            JELLY[i] = b;
+        }
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(e -> {
+            for (Block b : JELLY) e.add(b);
+        });
 
         ServerTickEvents.END_SERVER_TICK.register(ReapMod::tick);
 
@@ -75,6 +115,23 @@ public class ReapMod implements ModInitializer {
         DIRTY.add(id);
     }
 
+    /** Alguém está comendo essa gelatina agora? (usado pelo random tick para não resetar no meio da mordida) */
+    public static boolean isChewing(ServerWorld w, BlockPos pos) {
+        return CHEW.containsKey(new Key(w.getRegistryKey(), pos.asLong()));
+    }
+
+    // ------------------------------------------------------------------ vida da gelatina
+
+    /** 0 = intacta; 1..7 = quanto já foi comida. */
+    private static int stageOf(float dmg, int hp) {
+        if (dmg <= 0f) return 0;
+        return Math.min(7, 1 + (int) (dmg / hp * 7f));
+    }
+
+    private static float damageOfStage(int stage, int hp) {
+        return stage <= 0 ? 0f : hp * ((stage - 1) + 0.5f) / 7f;
+    }
+
     // ------------------------------------------------------------------ tick
 
     private static void tick(MinecraftServer server) {
@@ -87,13 +144,41 @@ public class ReapMod implements ModInitializer {
         }
 
         long now = server.getTicks();
+
+        // gelatinas que ninguém está comendo se recuperam aos poucos
+        Iterator<Map.Entry<Key, Chew>> ci = CHEW.entrySet().iterator();
+        while (ci.hasNext()) {
+            Map.Entry<Key, Chew> e = ci.next();
+            Chew c = e.getValue();
+            if (now - c.last <= CHEW_IDLE_TICKS) continue;
+            ServerWorld w = server.getWorld(e.getKey().dim());
+            BlockPos bp = BlockPos.fromLong(e.getKey().pos());
+            if (w == null || w.getChunkManager().getWorldChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) {
+                ci.remove();
+                continue;
+            }
+            BlockState bs = w.getBlockState(bp);
+            if (!(bs.getBlock() instanceof JellyBlock jb)) {
+                ci.remove();
+                continue;
+            }
+            int hp = TYPES[jb.tier].hp();
+            c.dmg -= hp * HEAL_PER_TICK;
+            int stage = stageOf(c.dmg, hp);
+            if (c.dmg <= 0f) ci.remove();
+            if (stage != bs.get(JellyBlock.BITES)) {
+                w.setBlockState(bp, bs.with(JellyBlock.BITES, stage), Block.NOTIFY_ALL);
+            }
+        }
+
+        // gelatinas devoradas voltam
         Iterator<Regen> it = REGEN.iterator();
         while (it.hasNext()) {
             Regen r = it.next();
             if (now < r.at()) continue;
             ServerWorld w = server.getWorld(r.dim());
             if (w != null && w.getBlockState(r.pos()).isAir()) {
-                w.setBlockState(r.pos(), GOO.getDefaultState());
+                w.setBlockState(r.pos(), JELLY[r.tier()].getDefaultState());
                 w.playSound(null, r.pos(), SoundEvents.BLOCK_SLIME_BLOCK_PLACE, SoundCategory.BLOCKS, 0.4f, 1.3f);
             }
             it.remove();
@@ -112,7 +197,11 @@ public class ReapMod implements ModInitializer {
         Vec3d c = p.getPos().add(0, SpoonLogic.CENTER_Y, 0);
         float dmg = 3f + d.level * 0.2f + d.rebirths * 1.5f;
 
+        // quantas colheres encostaram em cada gelatina neste tick
+        Map<Long, Integer> contacts = new HashMap<>();
+
         for (int i = 0; i < n; i++) {
+            Set<Long> touched = new HashSet<>();
             for (int s = 0; s < 2; s++) { // 2 amostras por tick: não "atravessa" alvos
                 double a = SpoonLogic.angle(time, 0f, i, n) - s * SpoonLogic.ORBIT_SPEED * 0.5;
                 double y = c.y + SpoonLogic.bob(time, 0f, i);
@@ -120,8 +209,16 @@ public class ReapMod implements ModInitializer {
                 for (double r = SpoonLogic.HANDLE_R + 0.8; r <= SpoonLogic.HANDLE_R + SpoonLogic.LENGTH; r += 0.5) {
                     Vec3d pt = new Vec3d(c.x + dx * r, y, c.z + dz * r);
                     hitEntities(server, st, w, p, d, pt, dmg);
-                    hitGoo(server, st, w, p, d, pt);
+                    touchJelly(w, pt, touched);
                 }
+            }
+            for (long l : touched) contacts.merge(l, 1, Integer::sum);
+        }
+
+        if (!contacts.isEmpty()) {
+            float power = d.bitePower();
+            for (Map.Entry<Long, Integer> e : contacts.entrySet()) {
+                chew(server, st, w, p, d, BlockPos.fromLong(e.getKey()), e.getValue() * power);
             }
         }
     }
@@ -133,27 +230,62 @@ public class ReapMod implements ModInitializer {
                 x -> x != p && x.isAlive() && !(x instanceof ArmorStandEntity))) {
             if (e instanceof PlayerEntity && !server.isPvpEnabled()) continue;
             if (e.damage(w.getDamageSources().playerAttack(p), dmg)) {
-                reward(server, st, w, p, d, d.multiplier() * 2, e.getPos().add(0, e.getHeight() * 0.6, 0), 1);
+                reward(server, st, w, p, d, d.multiplier() * 2, e.getPos().add(0, e.getHeight() * 0.6, 0), 1, 0);
             }
         }
     }
 
-    private static void hitGoo(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
-                               ReapData d, Vec3d pt) {
+    private static void touchJelly(ServerWorld w, Vec3d pt, Set<Long> out) {
         BlockPos base = BlockPos.ofFloored(pt);
         for (int dy = -1; dy <= 1; dy++) {
             BlockPos bp = base.up(dy);
-            if (!w.getBlockState(bp).isOf(GOO)) continue;
+            if (w.getBlockState(bp).getBlock() instanceof JellyBlock) out.add(bp.asLong());
+        }
+    }
+
+    /** Uma colher encostou: tira um pedaço. Quando o HP acaba a gelatina some e dá a recompensa. */
+    private static void chew(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
+                             ReapData d, BlockPos bp, float dmg) {
+        BlockState bs = w.getBlockState(bp);
+        if (!(bs.getBlock() instanceof JellyBlock jb)) return;
+        JellyType t = TYPES[jb.tier];
+        Key key = new Key(w.getRegistryKey(), bp.asLong());
+        long now = server.getTicks();
+
+        Chew c = CHEW.get(key);
+        if (c == null) {
+            c = new Chew();
+            c.dmg = damageOfStage(bs.get(JellyBlock.BITES), t.hp());
+            CHEW.put(key, c);
+        }
+        c.dmg += dmg;
+        c.last = now;
+        Vec3d center = Vec3d.ofCenter(bp);
+
+        if (c.dmg >= t.hp()) {
+            CHEW.remove(key);
             w.setBlockState(bp, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
-            w.playSound(null, bp, SoundEvents.BLOCK_SLIME_BLOCK_BREAK, SoundCategory.PLAYERS,
-                    0.7f, 0.8f + RNG.nextFloat() * 0.5f);
-            REGEN.add(new Regen(w.getRegistryKey(), bp.toImmutable(), server.getTicks() + GOO_REGEN_TICKS));
-            reward(server, st, w, p, d, d.multiplier(), Vec3d.ofCenter(bp), 0);
+            // evento vanilla 2001 = partículas de quebra do bloco + som de quebra
+            w.syncWorldEvent(2001, bp, Block.getRawIdFromState(bs));
+            REGEN.add(new Regen(w.getRegistryKey(), bp.toImmutable(), now + GOO_REGEN_TICKS + jb.tier * 40L, jb.tier));
+            reward(server, st, w, p, d, d.multiplier() * t.reward(), center, 0, jb.tier);
+            return;
+        }
+
+        int stage = stageOf(c.dmg, t.hp());
+        boolean changed = stage != bs.get(JellyBlock.BITES);
+        if (changed) {
+            w.setBlockState(bp, bs.with(JellyBlock.BITES, stage), Block.NOTIFY_ALL);
+            w.playSound(null, bp, SoundEvents.BLOCK_SLIME_BLOCK_HIT, SoundCategory.BLOCKS,
+                    0.7f, 0.9f + stage * 0.06f + RNG.nextFloat() * 0.15f);
+        }
+        if (changed || RNG.nextInt(4) == 0) { // respingos pequenos a cada mordida
+            ReapNet.sendCut(w, center, p.getUuid(), 0, 2, jb.tier);
         }
     }
 
     private static void reward(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
-                               ReapData d, int amount, Vec3d at, int kind) {
+                               ReapData d, int amount, Vec3d at, int kind, int tier) {
         int spoonsBefore = d.spoons();
         d.coins += amount;
         d.xp += amount;
@@ -164,7 +296,7 @@ public class ReapMod implements ModInitializer {
             up = true;
         }
         markSync(server, p.getUuid());
-        ReapNet.sendCut(w, at, p.getUuid(), amount, kind);
+        ReapNet.sendCut(w, at, p.getUuid(), amount, kind, tier);
         if (up) {
             ReapNet.sendLevelUp(p, d.level);
             if (d.spoons() > spoonsBefore) {

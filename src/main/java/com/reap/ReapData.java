@@ -22,6 +22,9 @@ public class ReapData {
     /** Começa com 2 colheres, ganha +1 a cada 10 níveis ("Next Spoon At: Level 10"). */
     public int spoons() { return Math.min(12, 2 + level / 10); }
 
+    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível e os rebirths. */
+    public float bitePower() { return (1f + 0.25f * (level - 1)) * (1f + 0.5f * rebirths); }
+
     public int nextSpoonLevel() { return (level / 10 + 1) * 10; }
 
     public void write(NbtCompound n) {

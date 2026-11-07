@@ -2,6 +2,7 @@ package com.reap.client;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.reap.JellyBlock;
 import com.reap.ReapData;
 import com.reap.SpoonLogic;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
@@ -45,7 +46,6 @@ public final class Fx {
     private static final double R_OUT = SpoonLogic.HANDLE_R + SpoonLogic.LENGTH - 0.05;
 
     private static final float[] WHITE = {1f, 1f, 1f};
-    private static final float[] GOO = {1f, 0.34f, 0.76f};
 
     // ------------------------------------------------------------ estado
     private static final class Drop { double x, y, z, vx, vy, vz; float size, age, life; float[] c; }
@@ -73,37 +73,28 @@ public final class Fx {
     }
 
     // ------------------------------------------------------------ eventos
-    public static void onCut(double x, double y, double z, UUID owner, int amount, int kind) {
+    /**
+     * kind 0 = gelatina devorada (splash grande), 1 = inimigo acertado, 2 = mordida (splash pequeno).
+     * tier = tipo da gelatina (define a cor dos respingos).
+     */
+    public static void onCut(double x, double y, double z, UUID owner, int amount, int kind, int tier) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null) return;
         boolean mine = mc.player != null && mc.player.getUuid().equals(owner);
+        float[] goo = Palette.goo(tier);
 
         if (kind == 0) {
-            int n = 20 + RNG.nextInt(8);
-            for (int i = 0; i < n; i++) {
-                double ang = RNG.nextDouble() * TAU;
-                double sp = 1.4 + RNG.nextDouble() * 3.6;
-                Drop d = new Drop();
-                d.x = x + (RNG.nextDouble() - 0.5) * 0.6;
-                d.y = y + (RNG.nextDouble() - 0.5) * 0.6;
-                d.z = z + (RNG.nextDouble() - 0.5) * 0.6;
-                d.vx = Math.cos(ang) * sp;
-                d.vz = Math.sin(ang) * sp;
-                d.vy = 1.8 + RNG.nextDouble() * 4.2;
-                d.size = 0.07f + RNG.nextFloat() * 0.12f;
-                d.life = 1.8f;
-                float k = 0.85f + RNG.nextFloat() * 0.15f;
-                d.c = new float[]{GOO[0] * k, GOO[1] * k + RNG.nextFloat() * 0.12f, GOO[2] * k};
-                drops.add(d);
-            }
-            addRing(x, y - 0.35, z, 1.9f, 0.45f, 0f, GOO);
-            addFlash(x, y, z, 1.6f, 0.35f, new float[]{1f, 0.7f, 0.92f});
+            splash(mc.world, x, y, z, goo, 26 + RNG.nextInt(10), 1f);
+            addRing(x, y - 0.35, z, 1.9f, 0.45f, 0f, goo);
+            addFlash(x, y, z, 1.6f, 0.35f, mix(goo, WHITE, 0.55f));
+        } else if (kind == 2) {
+            splash(mc.world, x, y, z, goo, 3 + RNG.nextInt(4), 0.55f);
         } else {
             addRing(x, y - 0.2, z, 1.3f, 0.35f, 0f, new float[]{0.6f, 0.92f, 1f});
             addFlash(x, y, z, 1.3f, 0.3f, new float[]{0.75f, 0.95f, 1f});
         }
 
-        if (mine) {
+        if (mine && amount > 0) {
             Txt t = new Txt();
             t.x = x + (RNG.nextDouble() - 0.5) * 0.5;
             t.y = y + 0.6;
@@ -113,6 +104,43 @@ public final class Fx {
             t.rgb = 0xFFD43B;
             texts.add(t);
         }
+    }
+
+    /**
+     * Gotas de gelatina saindo do bloco. As gotas saem pelos lados ABERTOS (sem bloco), senão ficariam
+     * presas dentro da parede de gelatina. Importante: elas atravessam blocos de gelatina, porque quando
+     * este pacote chega o cliente ainda pode ter o bloco antigo no lugar (a atualização do bloco chega
+     * alguns ms depois) - era isso que apagava todos os respingos no mesmo instante.
+     */
+    private static void splash(ClientWorld w, double x, double y, double z, float[] goo, int n, float power) {
+        BlockPos bp = BlockPos.ofFloored(x, y, z);
+        List<Direction> open = new ArrayList<>(6);
+        for (Direction dir : Direction.values()) {
+            BlockPos np = bp.offset(dir);
+            if (w.getBlockState(np).getCollisionShape(w, np).isEmpty()) open.add(dir);
+        }
+        for (int i = 0; i < n; i++) {
+            Direction dir = open.isEmpty() ? Direction.UP : open.get(RNG.nextInt(open.size()));
+            double sp = (1.4 + RNG.nextDouble() * 3.6) * power;
+            double ang = RNG.nextDouble() * TAU;
+            double spread = (0.6 + RNG.nextDouble() * 1.8) * power;
+            Drop d = new Drop();
+            d.x = x + dir.getOffsetX() * 0.42 + (RNG.nextDouble() - 0.5) * 0.6;
+            d.y = y + dir.getOffsetY() * 0.42 + (RNG.nextDouble() - 0.5) * 0.6;
+            d.z = z + dir.getOffsetZ() * 0.42 + (RNG.nextDouble() - 0.5) * 0.6;
+            d.vx = dir.getOffsetX() * sp + Math.cos(ang) * spread;
+            d.vz = dir.getOffsetZ() * sp + Math.sin(ang) * spread;
+            d.vy = dir.getOffsetY() * sp * 0.8 + (dir == Direction.DOWN ? 0.5 : 1.8 + RNG.nextDouble() * 4.2) * power;
+            d.size = (0.07f + RNG.nextFloat() * 0.12f) * (0.7f + 0.3f * power);
+            d.life = 1.8f;
+            float k = 0.85f + RNG.nextFloat() * 0.15f;
+            d.c = new float[]{Math.min(1f, goo[0] * k), Math.min(1f, goo[1] * k + RNG.nextFloat() * 0.1f), Math.min(1f, goo[2] * k)};
+            drops.add(d);
+        }
+    }
+
+    private static float[] mix(float[] a, float[] b, float t) {
+        return new float[]{a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t};
     }
 
     public static void onLevelUp() {
@@ -152,8 +180,9 @@ public final class Fx {
 
             BlockPos bp = BlockPos.ofFloored(d.x, d.y, d.z);
             BlockState bs = w.getBlockState(bp);
-            if (!bs.getCollisionShape(w, bp).isEmpty()) { it.remove(); continue; }
-            if (d.vy < 0) {
+            boolean inJelly = bs.getBlock() instanceof JellyBlock;
+            if (!inJelly && !bs.getCollisionShape(w, bp).isEmpty()) { it.remove(); continue; }
+            if (d.vy < 0 && !inJelly) {
                 double gy = groundY(w, d.x, d.y + 0.05, d.z, 1);
                 if (!Double.isNaN(gy) && d.y <= gy) {
                     Splat s = new Splat();

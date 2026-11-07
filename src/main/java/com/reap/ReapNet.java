@@ -35,8 +35,8 @@ public final class ReapNet {
         ServerPlayNetworking.send(to, SYNC, buf);
     }
 
-    /** kind 0 = gosma cortada, 1 = inimigo acertado. */
-    public static void sendCut(ServerWorld w, Vec3d at, UUID owner, int amount, int kind) {
+    /** kind 0 = gelatina devorada, 1 = inimigo acertado, 2 = mordida (respingo pequeno). tier = tipo da gelatina. */
+    public static void sendCut(ServerWorld w, Vec3d at, UUID owner, int amount, int kind, int tier) {
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeDouble(at.x);
         buf.writeDouble(at.y);
@@ -44,6 +44,7 @@ public final class ReapNet {
         buf.writeUuid(owner);
         buf.writeVarInt(amount);
         buf.writeByte(kind);
+        buf.writeByte(tier);
         for (ServerPlayerEntity p : PlayerLookup.around(w, at, 64)) {
             ServerPlayNetworking.send(p, CUT, PacketByteBufs.copy(buf));
         }
