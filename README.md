@@ -16,7 +16,24 @@ Requer JDK 17. Use o wrapper de qualquer projeto Fabric (ou instale o Gradle 8.6
 O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em *Actions > build > Run workflow*) e publica o jar como artefato `reap-mod`.
 
 ## Jogar
-- Bloco **Pink Goo** (aba Blocos de Construção): construa paredes. Colheres quebram, dão +multiplicador de moedas e XP, e a gosma volta após 10 s.
+- **Gelatinas** (aba Blocos de Construção): construa paredes. As colheres **devoram a gelatina aos poucos**: cada encostada
+  tira um pedaço (8 estágios visuais), ela solta respingos e, quando acaba, dá moedas/XP com multiplicador e volta após ~10 s.
+  Se você parar de comer, ela se recupera sozinha.
+- 9 tipos, cada um mais demorado (e mais valioso) que o anterior. O poder das colheres sobe com nível e rebirths,
+  então os tipos mais duros vão ficando viáveis conforme você evolui:
+
+  | Bloco | Cor | HP | Moedas/XP base |
+  |---|---|---|---|
+  | `reap:goo` | Rosa | 6 | 1 |
+  | `reap:goo_red` | Vermelha | 14 | 3 |
+  | `reap:goo_orange` | Laranja | 32 | 7 |
+  | `reap:goo_yellow` | Amarela | 70 | 16 |
+  | `reap:goo_green` | Verde | 150 | 36 |
+  | `reap:goo_cyan` | Ciano | 320 | 80 |
+  | `reap:goo_blue` | Azul | 680 | 180 |
+  | `reap:goo_purple` | Roxa | 1400 | 400 |
+  | `reap:goo_black` | Negra | 2900 | 900 |
+
 - Colheres também ferem mobs/jogadores (PvP respeita server.properties).
 - Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` (OP).
 - Cor da colher/rastro muda a cada rebirth.
@@ -24,6 +41,15 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
 ## Ajustes rápidos
 - `ReapData`: curva de XP (`xpNeeded`), multiplicador, quantidade de colheres.
 - `SpoonLogic`: velocidade de giro, raio, comprimento.
-- `ReapMod`: dano, regeneração da gosma (`GOO_REGEN_TICKS`), nível do rebirth.
+- `ReapMod`: dano, tabela `TYPES` (HP, recompensa e cor de cada gelatina), tempo de volta (`GOO_REGEN_TICKS`), recuperação (`HEAL_PER_TICK`), nível do rebirth.
+- `ReapData.bitePower()`: quanto HP cada colher tira por contato (sobe com nível/rebirths).
 - `client/Fx`: tudo dos efeitos (vida do rastro `TRAIL_NS`, gotas, anéis).
 - Texturas dos efeitos: `assets/reap/textures/fx/*.png` (troque por arte sua à vontade).
+
+## Gerar as texturas/modelos das gelatinas
+Texturas animadas (brilho ondulante, bolhas, núcleo colorido), os 8 modelos de "mordida", blockstates e lang são gerados por script:
+
+    pip install pillow numpy
+    python3 tools/gen_assets.py
+
+Para mudar cores ou nomes edite `TIERS` em `tools/gen_assets.py` (e `TYPES` em `ReapMod.java`, os ids precisam bater) e rode de novo.
