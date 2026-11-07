@@ -32,6 +32,13 @@ final class Palette {
         return f;
     }
 
+    /** Cor das gelatinas de treino (índice em ReapMod.TRAIN). */
+    static float[] train(int i) {
+        int t = Math.max(0, Math.min(ReapMod.TRAIN.length - 1, i));
+        int c = ReapMod.TRAIN[t].rgb();
+        return new float[]{((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f};
+    }
+
     private static float[] rgb(float h, float s, float v) {
         int c = MathHelper.hsvToRgb(h, s, v);
         return new float[]{((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f};

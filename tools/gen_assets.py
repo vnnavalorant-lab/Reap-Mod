@@ -201,17 +201,11 @@ def stage_model(stage):
 
 
 # ----------------------------------------------------------------------------- blocos de retorno (wins)
-# wins, cor
-PADS = [
-    (1,  (255, 176, 32)),
-    (2,  (140, 50, 225)),
-    (3,  (40, 200, 235)),
-    (5,  (235, 50, 60)),
-    (8,  (255, 150, 10)),
-    (12, (255, 80, 190)),
-    (25, (60, 100, 255)),
-    (50, (235, 235, 248)),
-]
+# Um bloco de retorno por fase: a cor vem da gelatina de mesmo índice em TIERS (rosa=fase 1 ... negra=fase 9).
+# Wins de cada fase (precisa bater com PAD_WINS em ReapMod.java).
+PAD_WINS = [1, 3, 8, 20, 50, 120, 300, 750, 900]
+PADS = [(wins, TIERS[i][3], TIERS[i][1].replace("Gelatina ", ""), TIERS[i][2].replace(" Jelly", ""))
+        for i, wins in enumerate(PAD_WINS)]
 
 
 def pad_top_texture(color):
@@ -298,7 +292,7 @@ def gen_pads(lang_pt, lang_en):
     rot = {"north": 0, "east": 90, "south": 180, "west": 270}
     corners = [("north", "west", 0), ("east", "north", 90), ("south", "east", 180), ("west", "south", 270)]
 
-    for wins, color in PADS:
+    for wins, color, cor_pt, cor_en in PADS:
         pid = f"return_{wins}"
         Image.fromarray(pad_top_texture(color), "RGBA").save(os.path.join(tex_dir, f"{pid}.png"))
         Image.fromarray(pad_side_texture(color), "RGBA").save(os.path.join(tex_dir, f"{pid}_side.png"))
@@ -322,8 +316,140 @@ def gen_pads(lang_pt, lang_en):
         write_json(os.path.join(ASSETS, "blockstates", f"{pid}.json"), {"multipart": parts})
         write_json(os.path.join(ASSETS, "models", "item", f"{pid}.json"), {"parent": f"reap:block/{pid}_item"})
         w = "Win" if wins == 1 else "Wins"
-        lang_pt[f"block.reap.{pid}"] = f"Retorno +{wins} {w}"
-        lang_en[f"block.reap.{pid}"] = f"Return Pad +{wins} {w}"
+        lang_pt[f"block.reap.{pid}"] = f"Retorno {cor_pt} +{wins} {w}"
+        lang_en[f"block.reap.{pid}"] = f"{cor_en} Return Pad +{wins} {w}"
+
+
+# ----------------------------------------------------------------------------- texturas dos efeitos (pedaços e poças)
+def _smooth(a, b, x):
+    t = np.clip((x - a) / (b - a), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def _g(x, y, cx, cy, sx, sy):
+    return np.exp(-(((x - cx) / sx) ** 2 + ((y - cy) / sy) ** 2))
+
+
+def gen_fx():
+    """jblob (pedaço de gelatina 3D) e puddle (poça brilhante): corpo cinza (recebe a cor do tipo) + brilho branco (aditivo)."""
+    S = 64
+    yy, xx = np.mgrid[0:S, 0:S]
+    x = (xx + 0.5) / S * 2 - 1
+    y = -((yy + 0.5) / S * 2 - 1)  # y para cima
+    L = np.array([-0.45, 0.6, 0.66])
+    L = L / np.linalg.norm(L)
+    out = os.path.join(ASSETS, "textures", "fx")
+    os.makedirs(out, exist_ok=True)
+
+    def save(name, gray, alpha):
+        img = np.dstack([np.repeat(gray[..., None], 3, axis=2) * 255, alpha * 255])
+        Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGBA").save(os.path.join(out, name))
+
+    # ---------------- pedaço (esfera translúcida)
+    R = 0.92
+    r = np.sqrt(x ** 2 + y ** 2)
+    u = r / R
+    h = np.sqrt(np.clip(1 - u ** 2, 0, 1))
+    diff = np.clip((x / R) * L[0] + (y / R) * L[1] + h * L[2], 0, 1)
+    gray = 0.50 + 0.20 * h ** 0.6 + 0.22 * diff + 0.16 * _g(x, y, 0.30, -0.33, 0.38, 0.38)
+    alpha = (0.80 + 0.18 * (1 - h)) * _smooth(1.0, 0.90, u)
+    save("jblob.png", np.clip(gray, 0, 1), alpha)
+    spec = (0.75 * _g(x, y, -0.32, 0.36, 0.20, 0.13) + 1.0 * _g(x, y, -0.30, 0.38, 0.06, 0.05)
+            + 0.32 * np.exp(-((r - 0.80) / 0.06) ** 2) * np.clip((x - y) / 1.2, 0, 1))
+    save("jblob_spec.png", np.ones((S, S)), np.clip(spec, 0, 1) * _smooth(1.0, 0.92, u) * 0.9)
+
+    # ---------------- poça (contorno orgânico + gotinhas ao redor)
+    th = np.arctan2(y, x)
+    Rth = (0.70 + 0.07 * np.sin(3 * th + 1.1) + 0.05 * np.sin(5 * th + 2.3)
+           + 0.035 * np.sin(7 * th + 0.4) + 0.02 * np.sin(11 * th + 1.7))
+    up = r / Rth
+    hh = np.sqrt(np.clip(1 - up ** 3, 0, 1))
+    mask = _smooth(1.0, 0.93, up)
+    sats = [(0.86, 0.5, 0.085), (0.84, 2.2, 0.065), (0.88, 3.6, 0.075), (0.82, 5.0, 0.055)]
+    sat_spec = np.zeros_like(hh)
+    for (rad, ang, sr) in sats:
+        cx, cy = rad * np.cos(ang), rad * np.sin(ang)
+        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) / sr
+        sh = np.sqrt(np.clip(1 - d ** 2, 0, 1))
+        hh = np.maximum(hh, sh)
+        mask = np.maximum(mask, _smooth(1.0, 0.8, d))
+        sat_spec += 0.8 * _g(x, y, cx - sr * 0.3, cy + sr * 0.3, sr * 0.35, sr * 0.3)
+    gy, gx = np.gradient(hh)
+    k = 0.35 / (2.0 / S)
+    nx, ny = -gx * k, gy * k  # y da imagem cresce para baixo
+    nz = np.ones_like(nx)
+    nrm = np.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
+    diff = np.clip((nx * L[0] + ny * L[1] + nz * L[2]) / nrm, 0, 1)
+    gray = 0.62 + 0.18 * hh + 0.22 * diff
+    alpha = (0.74 + 0.20 * (1 - hh)) * mask
+    save("puddle.png", np.clip(gray, 0, 1), alpha)
+    spec = (0.55 * _g(x, y, -0.28, 0.30, 0.22, 0.09) + 0.95 * _g(x, y, -0.25, 0.32, 0.05, 0.04)
+            + 0.30 * np.exp(-((up - 0.88) / 0.07) ** 2) * np.clip((x - y) / 1.2, 0, 1) + sat_spec)
+    save("puddle_spec.png", np.ones((S, S)), np.clip(spec, 0, 1) * mask * (hh > 0.04) * 0.9)
+
+
+# ----------------------------------------------------------------------------- gelatinas de treino (inquebráveis, dão XP)
+# id, nome pt, nome en, cor, rebirths necessários, multiplicador de XP, texto
+TRAIN = [
+    ("train_starter", "Starter",   (80, 215, 255)),
+    ("train_r1",      "Rebirth 1", (90, 220, 80)),
+    ("train_r3",      "Rebirth 3", (255, 226, 90)),
+    ("train_r5",      "Rebirth 5", (255, 60, 200)),
+    ("train_r6",      "Rebirth 6", (190, 238, 255)),
+]
+
+
+def train_plate_texture(color):
+    """Placa do chão: borda colorida + piso azul-acinzentado quadriculado."""
+    c = np.array(color, dtype=np.float32)
+    img = np.zeros((32, 32, 4), np.uint8)
+    for yy in range(32):
+        for xx in range(32):
+            edge = min(xx, yy, 31 - xx, 31 - yy)
+            if edge < 3:
+                k = 1.0 if edge in (0, 1) else 0.75
+                rgb = c * k
+                if edge == 0:
+                    rgb = c * 0.7 + 255 * 0.3
+            else:
+                base = np.array([66, 68, 104], np.float32) if ((xx // 4) + (yy // 4)) % 2 == 0 else np.array([54, 56, 90], np.float32)
+                rgb = base * 0.88 + c * 0.12
+                if xx % 4 == 0 or yy % 4 == 0:
+                    rgb *= 0.9
+            img[yy, xx, :3] = np.clip(rgb, 0, 255)
+            img[yy, xx, 3] = 255
+    return img
+
+
+def gen_train(lang_pt, lang_en):
+    tex_dir = os.path.join(ASSETS, "textures", "block")
+    blk = "minecraft:block/block"
+    for i, (tid, label, color) in enumerate(TRAIN):
+        frames = make_shell(40 + i, color)
+        Image.fromarray(np.concatenate(frames, axis=0), "RGBA").save(os.path.join(tex_dir, f"{tid}.png"))
+        write_json(os.path.join(tex_dir, f"{tid}.png.mcmeta"), {"animation": {"frametime": 3, "interpolate": True}})
+        Image.fromarray(make_core(40 + i, color), "RGBA").save(os.path.join(tex_dir, f"{tid}_core.png"))
+        Image.fromarray(train_plate_texture(color), "RGBA").save(os.path.join(tex_dir, f"{tid}_plate.png"))
+        full = lambda t, **kw: dict({"uv": [0, 0, 16, 16], "texture": t}, **kw)
+        model = {"parent": blk, "ambientocclusion": False,
+                 "textures": {"shell": f"reap:block/{tid}", "core": f"reap:block/{tid}_core",
+                              "plate": f"reap:block/{tid}_plate", "dark": "reap:block/pad_black",
+                              "particle": f"reap:block/{tid}"},
+                 "elements": [
+                     {"from": [0, 0, 0], "to": [16, 2, 16], "faces": {
+                         "up": full("#plate"), "down": full("#dark", cullface="down"),
+                         "north": {"uv": [0, 14, 16, 16], "texture": "#dark"}, "south": {"uv": [0, 14, 16, 16], "texture": "#dark"},
+                         "east": {"uv": [0, 14, 16, 16], "texture": "#dark"}, "west": {"uv": [0, 14, 16, 16], "texture": "#dark"}}},
+                     {"from": [2, 2, 2], "to": [14, 13, 14], "shade": False,
+                      "faces": {d: full("#shell") for d in ("up", "down", "north", "south", "east", "west")}},
+                     {"from": [4, 4, 4], "to": [12, 11, 12], "shade": False,
+                      "faces": {d: full("#core") for d in ("up", "down", "north", "south", "east", "west")}},
+                 ]}
+        write_json(os.path.join(ASSETS, "models", "block", f"{tid}.json"), model)
+        write_json(os.path.join(ASSETS, "blockstates", f"{tid}.json"), {"variants": {"": {"model": f"reap:block/{tid}"}}})
+        write_json(os.path.join(ASSETS, "models", "item", f"{tid}.json"), {"parent": f"reap:block/{tid}"})
+        lang_pt[f"block.reap.{tid}"] = f"Gelatina de Treino ({label})"
+        lang_en[f"block.reap.{tid}"] = f"Training Jelly ({label})"
 
 
 # ----------------------------------------------------------------------------- escrita
@@ -364,6 +490,8 @@ def main():
         lang_en[f"block.reap.{bid}"] = en
 
     gen_pads(lang_pt, lang_en)
+    gen_train(lang_pt, lang_en)
+    gen_fx()
     write_json(os.path.join(ASSETS, "lang", "pt_br.json"), lang_pt)
     write_json(os.path.join(ASSETS, "lang", "en_us.json"), lang_en)
 

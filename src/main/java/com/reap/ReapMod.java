@@ -45,7 +45,8 @@ public class ReapMod implements ModInitializer {
     public static final int GOO_REGEN_TICKS = 200;
     /** Ticks sem ninguém comendo até a gelatina começar a se recuperar sozinha. */
     public static final int CHEW_IDLE_TICKS = 50;
-    /** Fração do HP recuperada por tick quando ninguém está comendo (0.04 = ~1,2 s para curar tudo). */
+    /** Fração do HP recuperada por tick quando ninguém está comendo (0.04 = ~1,2 s para curar tudo na fase 1).
+     *  Fases mais altas se curam mais devagar: o valor é dividido por (1 + 0.5 * fase). */
     public static final float HEAL_PER_TICK = 0.04f;
 
     /**
@@ -56,23 +57,50 @@ public class ReapMod implements ModInitializer {
     public record JellyType(String id, int rgb, int hp, int reward, MapColor map) {}
 
     public static final JellyType[] TYPES = {
-            new JellyType("goo",        0xFF54BC,    6,   1, MapColor.PINK),     // rosa (a original)
-            new JellyType("goo_red",    0xE8243A,   14,   3, MapColor.RED),
-            new JellyType("goo_orange", 0xFF8A1C,   32,   7, MapColor.ORANGE),
-            new JellyType("goo_yellow", 0xFFD628,   70,  16, MapColor.YELLOW),
-            new JellyType("goo_green",  0x40D648,  150,  36, MapColor.LIME),
-            new JellyType("goo_cyan",   0x2CD6EC,  320,  80, MapColor.CYAN),
-            new JellyType("goo_blue",   0x3A62FF,  680, 180, MapColor.BLUE),
-            new JellyType("goo_purple", 0x9442EA, 1400, 400, MapColor.PURPLE),
-            new JellyType("goo_black",  0x342E54, 2900, 900, MapColor.BLACK),
+            new JellyType("goo",        0xFF54BC,    14, 1, MapColor.PINK),     // rosa (a original)
+            new JellyType("goo_red",    0xE8243A,   50, 4, MapColor.RED),
+            new JellyType("goo_orange", 0xFF8A1C,   150, 12, MapColor.ORANGE),
+            new JellyType("goo_yellow", 0xFFD628,   420, 35, MapColor.YELLOW),
+            new JellyType("goo_green",  0x40D648,  1100, 100, MapColor.LIME),
+            new JellyType("goo_cyan",   0x2CD6EC,  3000, 300, MapColor.CYAN),
+            new JellyType("goo_blue",   0x3A62FF,  8500, 900, MapColor.BLUE),
+            new JellyType("goo_purple", 0x9442EA, 24000, 2700, MapColor.PURPLE),
+            new JellyType("goo_black",  0x342E54, 70000, 8000, MapColor.BLACK),
     };
 
     public static final Block[] JELLY = new Block[TYPES.length];
 
-    /** Plataformas de retorno: quantidade de wins de cada uma (precisa bater com PADS em tools/gen_assets.py). */
-    public static final int[] PAD_WINS = {1, 2, 3, 5, 8, 12, 25, 50};
+    /**
+     * Plataformas de retorno, uma por fase: a de índice i tem a cor da gelatina TYPES[i].
+     * Quantidade de wins de cada uma (precisa bater com PAD_WINS em tools/gen_assets.py).
+     */
+    public static final int[] PAD_WINS = {1, 3, 8, 20, 50, 120, 300, 750, 900};
     public static final Block[] PADS = new Block[PAD_WINS.length];
     public static BlockEntityType<ReturnPadBlockEntity> PAD_BE;
+
+    /**
+     * Gelatinas de treino (inquebráveis, ficam no lobby): dão XP quando as colheres encostam.
+     * req = rebirths necessários, mult = multiplicador de XP. Precisa bater com TRAIN em tools/gen_assets.py.
+     */
+    public record TrainType(String id, String label, int req, float mult, int rgb) {}
+
+    public static final TrainType[] TRAIN = {
+            new TrainType("train_starter", "Starter",   0, 1f,   0x50D7FF),
+            new TrainType("train_r1",      "Rebirth 1", 1, 1.5f, 0x5ADC50),
+            new TrainType("train_r3",      "Rebirth 3", 3, 2f,   0xFFE25A),
+            new TrainType("train_r5",      "Rebirth 5", 5, 3f,   0xFF3CC8),
+            new TrainType("train_r6",      "Rebirth 6", 6, 9f,   0xBEEEFF),
+    };
+    public static final Block[] TRAIN_BLOCKS = new Block[TRAIN.length];
+    public static BlockEntityType<TrainJellyBlockEntity> TRAIN_BE;
+
+    /** XP por contato = (1 + nível / 3) * multiplicador da gelatina. Aumente/diminua para acelerar o treino. */
+    public static final float TRAIN_XP_BASE = 1f;
+    public static final float TRAIN_XP_PER_LEVEL = 1f / 3f;
+
+    public static String multLabel(float m) {
+        return m == Math.floor(m) ? "x" + (int) m : "x" + m;
+    }
 
     private record Regen(RegistryKey<World> dim, BlockPos pos, long at, int tier) {}
     private record Key(RegistryKey<World> dim, long pos) {}
@@ -83,6 +111,11 @@ public class ReapMod implements ModInitializer {
     private static final Map<Key, Chew> CHEW = new HashMap<>();
     private static final Set<UUID> DIRTY = new HashSet<>();
     private static final Random RNG = new Random();
+
+    /** XP ganho treinando, acumulado para mostrar um único "+N XP" a cada meio segundo. */
+    private static final class Acc { long xp; long next; ServerWorld w; Vec3d at; int idx; }
+    private static final Map<UUID, Acc> TRAIN_ACC = new HashMap<>();
+    private static final Map<UUID, Long> LOCK_MSG = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -114,9 +147,25 @@ public class ReapMod implements ModInitializer {
         PAD_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "return_pad"),
                 FabricBlockEntityTypeBuilder.create(ReturnPadBlockEntity::new, PADS).build());
 
+        for (int i = 0; i < TRAIN.length; i++) {
+            TrainType t = TRAIN[i];
+            Block b = Registry.register(Registries.BLOCK, new Identifier(ID, t.id()),
+                    new TrainJellyBlock(AbstractBlock.Settings.create()
+                            .mapColor(MapColor.CYAN)
+                            .strength(-1.0f, 3600000.0f) // inquebrável (como bedrock)
+                            .sounds(BlockSoundGroup.SLIME)
+                            .nonOpaque()
+                            .dropsNothing(), i));
+            Registry.register(Registries.ITEM, new Identifier(ID, t.id()), new BlockItem(b, new Item.Settings()));
+            TRAIN_BLOCKS[i] = b;
+        }
+        TRAIN_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "train_jelly"),
+                FabricBlockEntityTypeBuilder.create(TrainJellyBlockEntity::new, TRAIN_BLOCKS).build());
+
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(e -> {
             for (Block b : JELLY) e.add(b);
             for (Block b : PADS) e.add(b);
+            for (Block b : TRAIN_BLOCKS) e.add(b);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(ReapMod::tick);
@@ -186,11 +235,28 @@ public class ReapMod implements ModInitializer {
                 continue;
             }
             int hp = TYPES[jb.tier].hp();
-            c.dmg -= hp * HEAL_PER_TICK;
+            c.dmg -= hp * HEAL_PER_TICK / (1f + 0.5f * jb.tier);
             int stage = stageOf(c.dmg, hp);
             if (c.dmg <= 0f) ci.remove();
             if (stage != bs.get(JellyBlock.BITES)) {
                 w.setBlockState(bp, bs.with(JellyBlock.BITES, stage), Block.NOTIFY_ALL);
+            }
+        }
+
+        // feedback do treino: "+N XP" a cada 10 ticks
+        for (Iterator<Map.Entry<UUID, Acc>> ai = TRAIN_ACC.entrySet().iterator(); ai.hasNext(); ) {
+            Map.Entry<UUID, Acc> e = ai.next();
+            Acc a = e.getValue();
+            if (now >= a.next) {
+                if (a.xp > 0) {
+                    ReapNet.sendCut(a.w, a.at, e.getKey(), (int) Math.min(a.xp, Integer.MAX_VALUE), 3, a.idx);
+                    a.w.playSound(null, BlockPos.ofFloored(a.at), SoundEvents.BLOCK_SLIME_BLOCK_HIT,
+                            SoundCategory.BLOCKS, 0.45f, 0.9f + RNG.nextFloat() * 0.3f);
+                    a.xp = 0;
+                    a.next = now + 10;
+                } else if (now > a.next + 100) {
+                    ai.remove();
+                }
             }
         }
 
@@ -241,7 +307,7 @@ public class ReapMod implements ModInitializer {
         if (!contacts.isEmpty()) {
             float power = d.bitePower();
             for (Map.Entry<Long, Integer> e : contacts.entrySet()) {
-                chew(server, st, w, p, d, BlockPos.fromLong(e.getKey()), e.getValue() * power);
+                chew(server, st, w, p, d, BlockPos.fromLong(e.getKey()), e.getValue(), power);
             }
         }
     }
@@ -262,15 +328,21 @@ public class ReapMod implements ModInitializer {
         BlockPos base = BlockPos.ofFloored(pt);
         for (int dy = -1; dy <= 1; dy++) {
             BlockPos bp = base.up(dy);
-            if (w.getBlockState(bp).getBlock() instanceof JellyBlock) out.add(bp.asLong());
+            Block bl = w.getBlockState(bp).getBlock();
+            if (bl instanceof JellyBlock || bl instanceof TrainJellyBlock) out.add(bp.asLong());
         }
     }
 
     /** Uma colher encostou: tira um pedaço. Quando o HP acaba a gelatina some e dá a recompensa. */
     private static void chew(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
-                             ReapData d, BlockPos bp, float dmg) {
+                             ReapData d, BlockPos bp, int hits, float power) {
         BlockState bs = w.getBlockState(bp);
+        if (bs.getBlock() instanceof TrainJellyBlock tb) {
+            train(server, st, w, p, d, bp, tb, hits);
+            return;
+        }
         if (!(bs.getBlock() instanceof JellyBlock jb)) return;
+        float dmg = hits * power;
         JellyType t = TYPES[jb.tier];
         Key key = new Key(w.getRegistryKey(), bp.asLong());
         long now = server.getTicks();
@@ -304,6 +376,47 @@ public class ReapMod implements ModInitializer {
         }
         if (changed || RNG.nextInt(4) == 0) { // respingos pequenos a cada mordida
             ReapNet.sendCut(w, center, p.getUuid(), 0, 2, jb.tier);
+        }
+    }
+
+    /** Gelatina de treino: nunca quebra; dá XP (se o jogador tiver os rebirths exigidos). */
+    private static void train(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
+                              ReapData d, BlockPos bp, TrainJellyBlock tb, int hits) {
+        TrainType t = TRAIN[tb.index];
+        long now = server.getTicks();
+        if (d.rebirths < t.req()) {
+            Long last = LOCK_MSG.get(p.getUuid());
+            if (last == null || now - last > 40) {
+                LOCK_MSG.put(p.getUuid(), now);
+                p.sendMessage(Text.literal("Requer " + t.label()).formatted(Formatting.RED, Formatting.BOLD), true);
+            }
+            return;
+        }
+        long xp = Math.max(1L, Math.round((TRAIN_XP_BASE + d.level * TRAIN_XP_PER_LEVEL) * t.mult() * hits));
+        addXp(server, p, d, xp);
+        Acc a = TRAIN_ACC.computeIfAbsent(p.getUuid(), k -> new Acc());
+        a.xp += xp;
+        a.w = w;
+        a.at = Vec3d.ofCenter(bp);
+        a.idx = tb.index;
+    }
+
+    /** Soma XP, sobe de nível e avisa o cliente. */
+    private static void addXp(MinecraftServer server, ServerPlayerEntity p, ReapData d, long xp) {
+        int spoonsBefore = d.spoons();
+        d.xp += xp;
+        boolean up = false;
+        while (d.xp >= ReapData.xpNeeded(d.level)) {
+            d.xp -= ReapData.xpNeeded(d.level);
+            d.level++;
+            up = true;
+        }
+        markSync(server, p.getUuid());
+        if (up) {
+            ReapNet.sendLevelUp(p, d.level);
+            if (d.spoons() > spoonsBefore) {
+                p.sendMessage(Text.literal("Nova colher desbloqueada!").formatted(Formatting.AQUA, Formatting.BOLD), true);
+            }
         }
     }
 
