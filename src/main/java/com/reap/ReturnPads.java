@@ -17,21 +17,17 @@ import java.util.*;
 
 /** Lógica das plataformas de retorno: junta as plataformas encostadas, dá os wins e manda o jogador ao spawn. */
 public final class ReturnPads {
-    /**
-     * Como as plataformas encostadas se combinam numa só:
-     * true  = soma os wins de todas as plataformas do grupo;
-     * false = vale só a de maior valor.
-     */
-    public static final boolean MERGE_SUM = true;
     /** Tamanho máximo de um grupo (limite de segurança). */
     public static final int MAX_GROUP = 400;
     /** Ticks até a mesma pessoa poder ativar de novo. */
     public static final int COOLDOWN_TICKS = 20;
 
-    /** Grupo de plataformas conectadas. anchor = bloco "mais ao canto" (um por grupo), cx/cz = centro do grupo. */
-    public record Group(int sumWins, int maxWins, int size, BlockPos anchor, double cx, double cz) {
-        public int wins() { return MERGE_SUM ? sumWins : maxWins; }
-    }
+    /**
+     * Grupo de plataformas conectadas. Funciona como UM bloco só: o texto e os wins pertencem ao bloco "âncora"
+     * (o do canto: menor X e, em empate, menor Z). Os wins do grupo NÃO são somados.
+     * cx/cz = centro do grupo (onde o letreiro é desenhado).
+     */
+    public record Group(int wins, int size, BlockPos anchor, double cx, double cz) {}
 
     private static final Map<UUID, Long> COOLDOWN = new HashMap<>();
 
@@ -43,25 +39,27 @@ public final class ReturnPads {
         Set<Long> seen = new HashSet<>();
         queue.add(start);
         seen.add(start.asLong());
-        int sum = 0, max = 0, size = 0;
+        int size = 0, anchorWins = 0;
         int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
-        BlockPos anchor = start;
+        BlockPos anchor = null;
         while (!queue.isEmpty() && size < MAX_GROUP) {
             BlockPos p = queue.poll();
             if (!(w.getBlockState(p).getBlock() instanceof ReturnPadBlock pad)) continue;
             size++;
-            sum += pad.wins;
-            max = Math.max(max, pad.wins);
             minX = Math.min(minX, p.getX()); maxX = Math.max(maxX, p.getX());
             minZ = Math.min(minZ, p.getZ()); maxZ = Math.max(maxZ, p.getZ());
-            if (p.getX() < anchor.getX() || (p.getX() == anchor.getX() && p.getZ() < anchor.getZ())) anchor = p;
+            if (anchor == null || p.getX() < anchor.getX()
+                    || (p.getX() == anchor.getX() && p.getZ() < anchor.getZ())) {
+                anchor = p;
+                anchorWins = pad.wins;
+            }
             for (Direction d : Direction.Type.HORIZONTAL) {
                 BlockPos n = p.offset(d);
                 if (seen.add(n.asLong())) queue.add(n);
             }
         }
-        if (size == 0) return new Group(0, 0, 0, start, start.getX() + 0.5, start.getZ() + 0.5);
-        return new Group(sum, max, size, anchor, (minX + maxX + 1) / 2.0, (minZ + maxZ + 1) / 2.0);
+        if (size == 0) return new Group(0, 0, start, start.getX() + 0.5, start.getZ() + 0.5);
+        return new Group(anchorWins, size, anchor, (minX + maxX + 1) / 2.0, (minZ + maxZ + 1) / 2.0);
     }
 
     public static String label(int wins) {
@@ -82,7 +80,7 @@ public final class ReturnPads {
             if (!(bs.getBlock() instanceof ReturnPadBlock)) continue;
 
             Group g = group(w, feet);
-            int wins = g.wins();
+            int wins = g.wins(); // wins do bloco-âncora do grupo (sem soma)
             if (wins <= 0) continue;
 
             if (st == null) st = ReapState.get(server);

@@ -46,11 +46,19 @@ public class ReturnPadRenderer implements BlockEntityRenderer<ReturnPadBlockEnti
 
         String top = "Return";
         String bottom = ReturnPads.label(g.wins());
-        tr.draw(top, -tr.getWidth(top) / 2f, -11, 0xFFFFFFFF, true, ms.peek().getPositionMatrix(), vcp,
-                TextRenderer.TextLayerType.SEE_THROUGH, 0, 0xF000F0);
-        tr.draw(bottom, -tr.getWidth(bottom) / 2f, 0, 0xFFFFC21A, true, ms.peek().getPositionMatrix(), vcp,
-                TextRenderer.TextLayerType.SEE_THROUGH, 0x66000000, 0xF000F0);
+        var mat = ms.peek().getPositionMatrix();
+        // Passada 1: fundo escuro + texto fraco (aparece através de blocos).
+        // Passada 2: o texto de verdade, por cima do fundo. Se tudo fosse numa passada só, o fundo cobria o texto.
+        draw2(top, -11, 0xFFFFFFFF, 0x66000000, mat, vcp);
+        draw2(bottom, 0, 0xFFFFC21A, 0x66000000, mat, vcp);
         ms.pop();
+    }
+
+    private void draw2(String text, float y, int color, int bg, org.joml.Matrix4f mat, VertexConsumerProvider vcp) {
+        float x = -tr.getWidth(text) / 2f;
+        int faint = (color & 0x00FFFFFF) | 0x20000000;
+        tr.draw(text, x, y, faint, false, mat, vcp, TextRenderer.TextLayerType.SEE_THROUGH, bg, 0xF000F0);
+        tr.draw(text, x, y, color, false, mat, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
     }
 
     @Override

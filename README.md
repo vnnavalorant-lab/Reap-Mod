@@ -36,8 +36,8 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
 
 - **Blocos de Retorno** (aba Blocos de Construção, `reap:return_<wins>`): plataforma fina quadriculada. Ao pisar nela você
   ganha os **wins** (contador de troféu no HUD) e volta para o spawn inicial do mundo. 8 variações: +1, +2, +3, +5, +8, +12, +25 e +50 wins.
-  - Plataformas **encostadas se conectam** (sem borda entre elas) e funcionam como **uma só**: ativam uma única vez
-    e dão a **soma** dos wins de todas (`ReturnPads.MERGE_SUM = false` faz valer só a maior).
+  - Plataformas **encostadas se conectam** (sem borda entre elas) e funcionam como **um bloco só**: um único letreiro e uma
+    única pontuação, que pertencem ao bloco do canto do grupo (menor X, depois menor Z). Os wins **não** são somados.
   - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
 - Colheres também ferem mobs/jogadores (PvP respeita server.properties).
 - Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` e `/reap setwins <n>` (OP).
