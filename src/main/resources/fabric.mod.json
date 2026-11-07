@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "reap",
+  "version": "${version}",
+  "name": "Reap - Spoons",
+  "description": "Colheres que giram ao redor do jogador, cortam gosma, dão XP, níveis e rebirths.",
+  "authors": ["you"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.reap.ReapMod"],
+    "client": ["com.reap.client.ReapClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
