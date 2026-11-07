@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
 
@@ -20,6 +21,8 @@ public class ReapClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         for (Block b : ReapMod.JELLY) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
+
+        BlockEntityRendererFactories.register(ReapMod.PAD_BE, ctx -> new ReturnPadRenderer(ctx.getTextRenderer()));
 
         ClientPlayNetworking.registerGlobalReceiver(ReapNet.SYNC, (client, handler, buf, sender) -> {
             UUID id = buf.readUuid();

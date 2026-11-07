@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gera TODOS os assets das gelatinas (texturas animadas, modelos, blockstates, itens, lang).
+Gera TODOS os assets das gelatinas e dos blocos de retorno (texturas, modelos, blockstates, itens, lang).
 
     pip install pillow numpy
     python3 tools/gen_assets.py
@@ -200,6 +200,132 @@ def stage_model(stage):
     return {"parent": "minecraft:block/block", "ambientocclusion": False, "elements": elements}
 
 
+# ----------------------------------------------------------------------------- blocos de retorno (wins)
+# wins, cor
+PADS = [
+    (1,  (255, 176, 32)),
+    (2,  (140, 50, 225)),
+    (3,  (40, 200, 235)),
+    (5,  (235, 50, 60)),
+    (8,  (255, 150, 10)),
+    (12, (255, 80, 190)),
+    (25, (60, 100, 255)),
+    (50, (235, 235, 248)),
+]
+
+
+def pad_top_texture(color):
+    """Piso quadriculado (2 tons) com grade e 'studs', igual ao bloco de Return do jogo. 32x32, repete sem emenda."""
+    c = np.array(color, dtype=np.float32)
+    img = np.zeros((32, 32, 4), np.uint8)
+    for y in range(32):
+        for x in range(32):
+            k = 1.0 if ((x // 8) + (y // 8)) % 2 == 0 else 0.84
+            if x % 8 == 0 or y % 8 == 0:
+                k *= 0.74
+            elif x % 4 == 0 or y % 4 == 0:
+                k *= 0.90
+            elif x % 4 == 1 and y % 4 == 1:
+                k *= 1.13
+            img[y, x, :3] = np.clip(c * k, 0, 255)
+            img[y, x, 3] = 255
+    return img
+
+
+def pad_side_texture(color):
+    c = np.array(color, dtype=np.float32) * 0.62
+    img = np.zeros((16, 16, 4), np.uint8)
+    img[..., :3] = np.clip(c, 0, 255)
+    img[..., 3] = 255
+    return img
+
+
+def pad_black_texture():
+    rng = np.random.default_rng(5)
+    img = np.zeros((16, 16, 4), np.uint8)
+    n = rng.integers(0, 7, (16, 16))
+    img[..., 0] = 20 + n
+    img[..., 1] = 20 + n
+    img[..., 2] = 26 + n
+    img[..., 3] = 255
+    return img
+
+
+def quad(uv, tex, **kw):
+    d = {"uv": uv, "texture": tex}
+    d.update(kw)
+    return d
+
+
+def pad_parents():
+    blk = "minecraft:block/block"
+    models = {}
+    models["pad_center"] = {"parent": blk, "elements": [{
+        "from": [1, 0, 1], "to": [15, 3, 15],
+        "faces": {"up": quad([1, 1, 15, 15], "#top"), "down": quad([1, 1, 15, 15], "#black", cullface="down")}}]}
+    models["pad_edge_orange"] = {"parent": blk, "elements": [{
+        "from": [1, 0, 0], "to": [15, 3, 1],
+        "faces": {"up": quad([1, 0, 15, 1], "#top"), "down": quad([1, 15, 15, 16], "#black", cullface="down")}}]}
+    models["pad_edge_black"] = {"parent": blk, "elements": [{
+        "from": [1, 0, 0], "to": [15, 3, 1],
+        "faces": {"up": quad([1, 0, 15, 1], "#black"), "north": quad([1, 13, 15, 16], "#black"),
+                  "down": quad([1, 15, 15, 16], "#black", cullface="down")}}]}
+    models["pad_corner_orange"] = {"parent": blk, "elements": [{
+        "from": [0, 0, 0], "to": [1, 3, 1],
+        "faces": {"up": quad([0, 0, 1, 1], "#top"), "down": quad([0, 15, 1, 16], "#black", cullface="down")}}]}
+    models["pad_corner_black"] = {"parent": blk, "elements": [{
+        "from": [0, 0, 0], "to": [1, 3, 1],
+        "faces": {"up": quad([0, 0, 1, 1], "#black"), "north": quad([15, 13, 16, 16], "#black"),
+                  "west": quad([0, 13, 1, 16], "#black"), "down": quad([0, 15, 1, 16], "#black", cullface="down")}}]}
+    models["pad_item"] = {"parent": blk, "elements": [
+        {"from": [0, 0, 0], "to": [16, 2, 16], "faces": {
+            d: quad([0, 0, 16, 16] if d in ("up", "down") else [0, 14, 16, 16], "#black") for d in
+            ("up", "down", "north", "south", "east", "west")}},
+        {"from": [1, 2, 1], "to": [15, 3, 15], "faces": {
+            "up": quad([1, 1, 15, 15], "#top"),
+            "north": quad([1, 13, 15, 14], "#side"), "south": quad([1, 13, 15, 14], "#side"),
+            "east": quad([1, 13, 15, 14], "#side"), "west": quad([1, 13, 15, 14], "#side")}}]}
+    return models
+
+
+def gen_pads(lang_pt, lang_en):
+    tex_dir = os.path.join(ASSETS, "textures", "block")
+    Image.fromarray(pad_black_texture(), "RGBA").save(os.path.join(tex_dir, "pad_black.png"))
+    for name, m in pad_parents().items():
+        write_json(os.path.join(ASSETS, "models", "block", f"{name}.json"), m)
+
+    dirs = ["north", "east", "south", "west"]
+    rot = {"north": 0, "east": 90, "south": 180, "west": 270}
+    corners = [("north", "west", 0), ("east", "north", 90), ("south", "east", 180), ("west", "south", 270)]
+
+    for wins, color in PADS:
+        pid = f"return_{wins}"
+        Image.fromarray(pad_top_texture(color), "RGBA").save(os.path.join(tex_dir, f"{pid}.png"))
+        Image.fromarray(pad_side_texture(color), "RGBA").save(os.path.join(tex_dir, f"{pid}_side.png"))
+        tex = {"top": f"reap:block/{pid}", "side": f"reap:block/{pid}_side",
+               "black": "reap:block/pad_black", "particle": f"reap:block/{pid}"}
+        for part in ("center", "edge_orange", "edge_black", "corner_orange", "corner_black"):
+            write_json(os.path.join(ASSETS, "models", "block", f"{pid}_{part}.json"),
+                       {"parent": f"reap:block/pad_{part}", "textures": tex})
+        write_json(os.path.join(ASSETS, "models", "block", f"{pid}_item.json"),
+                   {"parent": "reap:block/pad_item", "textures": tex})
+
+        parts = [{"apply": {"model": f"reap:block/{pid}_center"}}]
+        for d in dirs:
+            parts.append({"when": {d: "true"}, "apply": {"model": f"reap:block/{pid}_edge_orange", "y": rot[d]}})
+            parts.append({"when": {d: "false"}, "apply": {"model": f"reap:block/{pid}_edge_black", "y": rot[d]}})
+        for a, b, y in corners:
+            parts.append({"when": {"AND": [{a: "true"}, {b: "true"}]},
+                          "apply": {"model": f"reap:block/{pid}_corner_orange", "y": y}})
+            parts.append({"when": {"OR": [{a: "false"}, {b: "false"}]},
+                          "apply": {"model": f"reap:block/{pid}_corner_black", "y": y}})
+        write_json(os.path.join(ASSETS, "blockstates", f"{pid}.json"), {"multipart": parts})
+        write_json(os.path.join(ASSETS, "models", "item", f"{pid}.json"), {"parent": f"reap:block/{pid}_item"})
+        w = "Win" if wins == 1 else "Wins"
+        lang_pt[f"block.reap.{pid}"] = f"Retorno +{wins} {w}"
+        lang_en[f"block.reap.{pid}"] = f"Return Pad +{wins} {w}"
+
+
 # ----------------------------------------------------------------------------- escrita
 def write_json(path, obj):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -237,6 +363,7 @@ def main():
         lang_pt[f"block.reap.{bid}"] = pt
         lang_en[f"block.reap.{bid}"] = en
 
+    gen_pads(lang_pt, lang_en)
     write_json(os.path.join(ASSETS, "lang", "pt_br.json"), lang_pt)
     write_json(os.path.join(ASSETS, "lang", "en_us.json"), lang_en)
 

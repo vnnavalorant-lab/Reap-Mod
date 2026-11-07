@@ -30,6 +30,20 @@ public final class Hud {
         g.fill(cl + 8, 11, cl + 12, 15, 0xFFFFF0A8);
         g.drawTextWithShadow(tr, coins, cl + 19, 8, 0xFFFFE066);
 
+        // wins (troféu) ao lado das moedas
+        String wins = fmt(d.wins);
+        int ww = tr.getWidth(wins) + 26;
+        int wl = cl + cw + 6;
+        g.fill(wl, 4, wl + ww, 20, 0xAA101010);
+        g.fill(wl, 4, wl + ww, 5, 0xFFFFC21A);
+        g.fill(wl + 6, 8, wl + 14, 13, 0xFFFFD43B);   // taça
+        g.fill(wl + 5, 9, wl + 6, 12, 0xFFB8860B);    // alças
+        g.fill(wl + 14, 9, wl + 15, 12, 0xFFB8860B);
+        g.fill(wl + 9, 13, wl + 11, 16, 0xFFFFD43B);  // haste
+        g.fill(wl + 7, 16, wl + 13, 18, 0xFFB8860B);  // base
+        g.fill(wl + 7, 9, wl + 9, 12, 0xFFFFF0A8);    // brilho
+        g.drawTextWithShadow(tr, wins, wl + 19, 8, 0xFFFFE066);
+
         // próxima colher
         g.drawCenteredTextWithShadow(tr, "Next Spoon At: Level " + d.nextSpoonLevel(), cx, 24, 0xFFFFFFFF);
 

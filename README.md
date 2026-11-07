@@ -34,8 +34,13 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   | `reap:goo_purple` | Roxa | 1400 | 400 |
   | `reap:goo_black` | Negra | 2900 | 900 |
 
+- **Blocos de Retorno** (aba Blocos de Construção, `reap:return_<wins>`): plataforma fina quadriculada. Ao pisar nela você
+  ganha os **wins** (contador de troféu no HUD) e volta para o spawn inicial do mundo. 8 variações: +1, +2, +3, +5, +8, +12, +25 e +50 wins.
+  - Plataformas **encostadas se conectam** (sem borda entre elas) e funcionam como **uma só**: ativam uma única vez
+    e dão a **soma** dos wins de todas (`ReturnPads.MERGE_SUM = false` faz valer só a maior).
+  - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
 - Colheres também ferem mobs/jogadores (PvP respeita server.properties).
-- Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` (OP).
+- Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` e `/reap setwins <n>` (OP).
 - Cor da colher/rastro muda a cada rebirth.
 
 ## Ajustes rápidos

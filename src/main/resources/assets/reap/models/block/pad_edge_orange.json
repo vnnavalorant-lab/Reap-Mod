@@ -1,0 +1,1 @@
+{"parent":"minecraft:block/block","elements":[{"from":[1,0,0],"to":[15,3,1],"faces":{"up":{"uv":[1,0,15,1],"texture":"#top"},"down":{"uv":[1,15,15,16],"texture":"#black","cullface":"down"}}}]}

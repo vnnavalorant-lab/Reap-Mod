@@ -5,11 +5,13 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.MapColor;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -67,6 +69,11 @@ public class ReapMod implements ModInitializer {
 
     public static final Block[] JELLY = new Block[TYPES.length];
 
+    /** Plataformas de retorno: quantidade de wins de cada uma (precisa bater com PADS em tools/gen_assets.py). */
+    public static final int[] PAD_WINS = {1, 2, 3, 5, 8, 12, 25, 50};
+    public static final Block[] PADS = new Block[PAD_WINS.length];
+    public static BlockEntityType<ReturnPadBlockEntity> PAD_BE;
+
     private record Regen(RegistryKey<World> dim, BlockPos pos, long at, int tier) {}
     private record Key(RegistryKey<World> dim, long pos) {}
     /** Dano acumulado numa gelatina que está sendo devorada. */
@@ -93,11 +100,27 @@ public class ReapMod implements ModInitializer {
             Registry.register(Registries.ITEM, new Identifier(ID, t.id()), new BlockItem(b, new Item.Settings()));
             JELLY[i] = b;
         }
+        for (int i = 0; i < PAD_WINS.length; i++) {
+            String id = "return_" + PAD_WINS[i];
+            Block b = Registry.register(Registries.BLOCK, new Identifier(ID, id),
+                    new ReturnPadBlock(AbstractBlock.Settings.create()
+                            .mapColor(MapColor.ORANGE)
+                            .strength(0.5f)
+                            .sounds(BlockSoundGroup.STONE)
+                            .nonOpaque(), PAD_WINS[i]));
+            Registry.register(Registries.ITEM, new Identifier(ID, id), new BlockItem(b, new Item.Settings()));
+            PADS[i] = b;
+        }
+        PAD_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "return_pad"),
+                FabricBlockEntityTypeBuilder.create(ReturnPadBlockEntity::new, PADS).build());
+
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(e -> {
             for (Block b : JELLY) e.add(b);
+            for (Block b : PADS) e.add(b);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(ReapMod::tick);
+        ServerTickEvents.END_SERVER_TICK.register(ReturnPads::tick);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ReapState st = ReapState.get(server);

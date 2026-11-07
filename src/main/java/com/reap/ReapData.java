@@ -8,6 +8,7 @@ public class ReapData {
     public int level = 1;
     public long xp = 0;
     public long coins = 0;
+    public long wins = 0;
     public int rebirths = 0;
     public boolean enabled = true;
 
@@ -31,6 +32,7 @@ public class ReapData {
         n.putInt("level", level);
         n.putLong("xp", xp);
         n.putLong("coins", coins);
+        n.putLong("wins", wins);
         n.putInt("rebirths", rebirths);
         n.putBoolean("enabled", enabled);
     }
@@ -40,6 +42,7 @@ public class ReapData {
         d.level = Math.max(1, n.getInt("level"));
         d.xp = n.getLong("xp");
         d.coins = n.getLong("coins");
+        d.wins = n.getLong("wins");
         d.rebirths = n.getInt("rebirths");
         d.enabled = !n.contains("enabled") || n.getBoolean("enabled");
         return d;
@@ -51,6 +54,7 @@ public class ReapData {
         b.writeVarLong(coins);
         b.writeVarInt(rebirths);
         b.writeBoolean(enabled);
+        b.writeVarLong(wins);
     }
 
     public static ReapData read(PacketByteBuf b) {
@@ -60,6 +64,7 @@ public class ReapData {
         d.coins = b.readVarLong();
         d.rebirths = b.readVarInt();
         d.enabled = b.readBoolean();
+        d.wins = b.readVarLong();
         return d;
     }
 }
