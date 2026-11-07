@@ -400,54 +400,77 @@ TRAIN = [
 
 
 def train_plate_texture(color):
-    """Placa do chão: borda colorida + piso azul-acinzentado quadriculado."""
+    """Placa do chão (5x5 blocos): borda colorida com brilho + piso azul-acinzentado com ondas e azulejos. 64x64."""
     c = np.array(color, dtype=np.float32)
-    img = np.zeros((32, 32, 4), np.uint8)
-    for yy in range(32):
-        for xx in range(32):
-            edge = min(xx, yy, 31 - xx, 31 - yy)
-            if edge < 3:
-                k = 1.0 if edge in (0, 1) else 0.75
-                rgb = c * k
-                if edge == 0:
-                    rgb = c * 0.7 + 255 * 0.3
+    S = 64
+    img = np.zeros((S, S, 4), np.uint8)
+    yy, xx = np.mgrid[0:S, 0:S]
+    for y in range(S):
+        for x in range(S):
+            edge = min(x, y, S - 1 - x, S - 1 - y)
+            if edge < 2:
+                rgb = c * 0.55 + 255 * 0.45          # fio claro externo
+            elif edge < 8:
+                rgb = c * (1.0 - 0.06 * (edge - 2))   # moldura colorida
+            elif edge < 10:
+                rgb = c * 0.45                        # sombra interna
             else:
-                base = np.array([66, 68, 104], np.float32) if ((xx // 4) + (yy // 4)) % 2 == 0 else np.array([54, 56, 90], np.float32)
-                rgb = base * 0.88 + c * 0.12
-                if xx % 4 == 0 or yy % 4 == 0:
-                    rgb *= 0.9
-            img[yy, xx, :3] = np.clip(rgb, 0, 255)
-            img[yy, xx, 3] = 255
+                tile = ((x // 4) + (y // 4)) % 2
+                base = np.array([66, 68, 104], np.float32) if tile == 0 else np.array([56, 58, 92], np.float32)
+                wave = 0.5 + 0.5 * np.sin((x + 2 * np.sin(y * 0.35)) * 0.45)
+                rgb = base * 0.86 + c * (0.07 + 0.10 * wave)  # ondinhas na cor da gelatina
+                if x % 4 == 0 or y % 4 == 0:
+                    rgb = rgb * 0.92
+            img[y, x, :3] = np.clip(rgb, 0, 255)
+            img[y, x, 3] = 255
     return img
 
 
 def gen_train(lang_pt, lang_en):
+    """
+    Gelatina de treino GRANDE: 1 bloco "controlador" + blocos-parte invisíveis (3x3x3 de colisão).
+    O visual (placa 5x5 + gelatina ~3 blocos) é desenhado pelo BlockEntityRenderer a partir do modelo *_big
+    (16 px de largura, ampliado 5x no jogo: placa 5 blocos, gelatina 3 de largura e 2,7 de altura).
+    """
     tex_dir = os.path.join(ASSETS, "textures", "block")
     blk = "minecraft:block/block"
+    faces6 = ("up", "down", "north", "south", "east", "west")
+    full = lambda t, **kw: dict({"uv": [0, 0, 16, 16], "texture": t}, **kw)
+
+    write_json(os.path.join(ASSETS, "models", "block", "empty.json"),
+               {"textures": {"particle": "reap:block/pad_black"}, "elements": []})
+    write_json(os.path.join(ASSETS, "blockstates", "train_part.json"),
+               {"variants": {f"layer={i}": {"model": "reap:block/empty"} for i in range(3)}})
+
     for i, (tid, label, color) in enumerate(TRAIN):
         frames = make_shell(40 + i, color)
         Image.fromarray(np.concatenate(frames, axis=0), "RGBA").save(os.path.join(tex_dir, f"{tid}.png"))
         write_json(os.path.join(tex_dir, f"{tid}.png.mcmeta"), {"animation": {"frametime": 3, "interpolate": True}})
         Image.fromarray(make_core(40 + i, color), "RGBA").save(os.path.join(tex_dir, f"{tid}_core.png"))
         Image.fromarray(train_plate_texture(color), "RGBA").save(os.path.join(tex_dir, f"{tid}_plate.png"))
-        full = lambda t, **kw: dict({"uv": [0, 0, 16, 16], "texture": t}, **kw)
-        model = {"parent": blk, "ambientocclusion": False,
-                 "textures": {"shell": f"reap:block/{tid}", "core": f"reap:block/{tid}_core",
-                              "plate": f"reap:block/{tid}_plate", "dark": "reap:block/pad_black",
-                              "particle": f"reap:block/{tid}"},
-                 "elements": [
-                     {"from": [0, 0, 0], "to": [16, 2, 16], "faces": {
-                         "up": full("#plate"), "down": full("#dark", cullface="down"),
-                         "north": {"uv": [0, 14, 16, 16], "texture": "#dark"}, "south": {"uv": [0, 14, 16, 16], "texture": "#dark"},
-                         "east": {"uv": [0, 14, 16, 16], "texture": "#dark"}, "west": {"uv": [0, 14, 16, 16], "texture": "#dark"}}},
-                     {"from": [2, 2, 2], "to": [14, 13, 14], "shade": False,
-                      "faces": {d: full("#shell") for d in ("up", "down", "north", "south", "east", "west")}},
-                     {"from": [4, 4, 4], "to": [12, 11, 12], "shade": False,
-                      "faces": {d: full("#core") for d in ("up", "down", "north", "south", "east", "west")}},
-                 ]}
-        write_json(os.path.join(ASSETS, "models", "block", f"{tid}.json"), model)
-        write_json(os.path.join(ASSETS, "blockstates", f"{tid}.json"), {"variants": {"": {"model": f"reap:block/{tid}"}}})
-        write_json(os.path.join(ASSETS, "models", "item", f"{tid}.json"), {"parent": f"reap:block/{tid}"})
+
+        big = {"parent": blk, "ambientocclusion": False,
+               "textures": {"shell": f"reap:block/{tid}", "core": f"reap:block/{tid}_core",
+                            "plate": f"reap:block/{tid}_plate", "dark": "reap:block/pad_black",
+                            "particle": f"reap:block/{tid}"},
+               "elements": [
+                   {"from": [0, 0, 0], "to": [16, 0.4, 16], "faces": {
+                       "up": full("#plate"),
+                       "north": {"uv": [0, 15, 16, 16], "texture": "#dark"}, "south": {"uv": [0, 15, 16, 16], "texture": "#dark"},
+                       "east": {"uv": [0, 15, 16, 16], "texture": "#dark"}, "west": {"uv": [0, 15, 16, 16], "texture": "#dark"}}},
+                   {"from": [3.2, 0.4, 3.2], "to": [12.8, 9.04, 12.8], "shade": False,
+                    "faces": {d: full("#shell") for d in faces6}},
+                   {"from": [4.8, 1.6, 4.8], "to": [11.2, 7.8, 11.2], "shade": False,
+                    "faces": {d: full("#core") for d in faces6}},
+               ]}
+        write_json(os.path.join(ASSETS, "models", "block", f"{tid}_big.json"), big)
+        # bloco "visual" escondido (nunca colocado): só fornece o modelo para o renderer
+        write_json(os.path.join(ASSETS, "blockstates", f"{tid}_big.json"),
+                   {"variants": {"": {"model": f"reap:block/{tid}_big"}}})
+        # bloco controlador colocado no mundo: invisível (o renderer desenha tudo)
+        write_json(os.path.join(ASSETS, "blockstates", f"{tid}.json"),
+                   {"variants": {"": {"model": "reap:block/empty"}}})
+        write_json(os.path.join(ASSETS, "models", "item", f"{tid}.json"), {"parent": f"reap:block/{tid}_big"})
         lang_pt[f"block.reap.{tid}"] = f"Gelatina de Treino ({label})"
         lang_en[f"block.reap.{tid}"] = f"Training Jelly ({label})"
 

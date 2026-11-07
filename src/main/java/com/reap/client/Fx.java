@@ -112,6 +112,7 @@ public final class Fx {
                         0.22f + RNG.nextFloat() * 0.25f, 0.2f + RNG.nextFloat() * 0.25f, mix(goo, WHITE, 0.7f));
             }
         } else if (kind == 3) { // treino: respingos pequenos + brilho, a gelatina não quebra
+            TrainJellyRenderer.kick(x, z);
             spawnChunks(mc.world, x, y + 0.2, z, goo, 1 + RNG.nextInt(2), 0.5f, false);
             splash(mc.world, x, y + 0.2, z, goo, 2 + RNG.nextInt(3), 0.5f);
             addFlash(x + (RNG.nextDouble() - 0.5) * 0.8, y + 0.2 + RNG.nextDouble() * 0.5, z + (RNG.nextDouble() - 0.5) * 0.8,

@@ -39,8 +39,10 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   - Plataformas **encostadas se conectam** (sem borda entre elas) e funcionam como **um bloco só**: um único letreiro e uma
     única pontuação, que pertencem ao bloco do canto do grupo (menor X, depois menor Z). Os wins **não** são somados.
   - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
-- **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): ficam paradas no lobby sobre uma placa,
-  são **inquebráveis** e nunca somem. Enquanto as colheres encostam, o jogador ganha **XP** para subir de nível e chegar ao Rebirth mais rápido.
+- **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): **grandes como no jogo original**
+  (gelatina de ~3 blocos de largura e 2,7 de altura sobre uma placa 5x5). Ao colocar o bloco ele ocupa uma área livre de **3x3x3**
+  (o bloco clicado é o centro da base; precisa de espaço). São **inquebráveis** (só no criativo) e nunca são devoradas, balançam como
+  gelatina e balançam mais quando as colheres encostam. Enquanto as colheres encostam, o jogador ganha **XP** para subir de nível e chegar ao Rebirth mais rápido.
   Cada uma tem um multiplicador de XP e exige rebirths (senão aparece "Requer Rebirth N"). O texto sobre cada uma mostra o nome
   (verde, ou vermelho se ainda bloqueada) e o multiplicador:
 

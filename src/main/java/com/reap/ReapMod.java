@@ -91,7 +91,12 @@ public class ReapMod implements ModInitializer {
             new TrainType("train_r5",      "Rebirth 5", 5, 3f,   0xFF3CC8),
             new TrainType("train_r6",      "Rebirth 6", 6, 9f,   0xBEEEFF),
     };
+    /** Blocos colocáveis (controlador da estrutura 3x3x3). */
     public static final Block[] TRAIN_BLOCKS = new Block[TRAIN.length];
+    /** Blocos "visuais" escondidos (sem item): só fornecem o modelo grande para o renderer. */
+    public static final Block[] TRAIN_VIS = new Block[TRAIN.length];
+    /** Parte invisível da estrutura (colisão). */
+    public static Block TRAIN_PART;
     public static BlockEntityType<TrainJellyBlockEntity> TRAIN_BE;
 
     /** XP por contato = (1 + nível / 3) * multiplicador da gelatina. Aumente/diminua para acelerar o treino. */
@@ -158,7 +163,18 @@ public class ReapMod implements ModInitializer {
                             .dropsNothing(), i));
             Registry.register(Registries.ITEM, new Identifier(ID, t.id()), new BlockItem(b, new Item.Settings()));
             TRAIN_BLOCKS[i] = b;
+            TRAIN_VIS[i] = Registry.register(Registries.BLOCK, new Identifier(ID, t.id() + "_big"),
+                    new Block(AbstractBlock.Settings.create().nonOpaque().strength(-1.0f, 3600000.0f).dropsNothing()));
         }
+        TRAIN_PART = Registry.register(Registries.BLOCK, new Identifier(ID, "train_part"),
+                new TrainJellyPartBlock(AbstractBlock.Settings.create()
+                        .mapColor(MapColor.CYAN)
+                        .strength(-1.0f, 3600000.0f)
+                        .sounds(BlockSoundGroup.SLIME)
+                        .nonOpaque()
+                        .dropsNothing()
+                        .suffocates((s, w, p) -> false)
+                        .blockVision((s, w, p) -> false)));
         TRAIN_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "train_jelly"),
                 FabricBlockEntityTypeBuilder.create(TrainJellyBlockEntity::new, TRAIN_BLOCKS).build());
 
@@ -328,8 +344,15 @@ public class ReapMod implements ModInitializer {
         BlockPos base = BlockPos.ofFloored(pt);
         for (int dy = -1; dy <= 1; dy++) {
             BlockPos bp = base.up(dy);
-            Block bl = w.getBlockState(bp).getBlock();
-            if (bl instanceof JellyBlock || bl instanceof TrainJellyBlock) out.add(bp.asLong());
+            BlockState bst = w.getBlockState(bp);
+            Block bl = bst.getBlock();
+            if (bl instanceof JellyBlock || bl instanceof TrainJellyBlock) {
+                out.add(bp.asLong());
+            } else if (bl instanceof TrainJellyPartBlock) {
+                // partes da gelatina grande contam como o controlador (um contato por estrutura)
+                BlockPos c = TrainJellyPartBlock.findController(w, bp, bst.get(TrainJellyPartBlock.LAYER));
+                if (c != null) out.add(c.asLong());
+            }
         }
     }
 
@@ -397,7 +420,13 @@ public class ReapMod implements ModInitializer {
         Acc a = TRAIN_ACC.computeIfAbsent(p.getUuid(), k -> new Acc());
         a.xp += xp;
         a.w = w;
-        a.at = Vec3d.ofCenter(bp);
+        // ponto na superfície da gelatina (~1,75 bloco do centro), do lado do jogador
+        double cx = bp.getX() + 0.5, cz = bp.getZ() + 0.5;
+        double dx = p.getX() - cx, dz = p.getZ() - cz;
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 0.01) { dx = 1; dz = 0; len = 1; }
+        double ey = Math.max(bp.getY() + 0.4, Math.min(p.getY() + 1.0, bp.getY() + 2.5));
+        a.at = new Vec3d(cx + dx / len * 1.75, ey, cz + dz / len * 1.75);
         a.idx = tb.index;
     }
 

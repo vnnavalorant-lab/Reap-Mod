@@ -21,7 +21,7 @@ public class ReapClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         for (Block b : ReapMod.JELLY) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
-        for (Block b : ReapMod.TRAIN_BLOCKS) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
+        for (Block b : ReapMod.TRAIN_VIS) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
 
         BlockEntityRendererFactories.register(ReapMod.PAD_BE, ctx -> new ReturnPadRenderer(ctx.getTextRenderer()));
         BlockEntityRendererFactories.register(ReapMod.TRAIN_BE, ctx -> new TrainJellyRenderer(ctx.getTextRenderer()));
