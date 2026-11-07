@@ -15,6 +15,10 @@ import java.util.UUID;
 public final class ReapNet {
     public static final Identifier SYNC = new Identifier(ReapMod.ID, "sync");
     public static final Identifier CUT = new Identifier(ReapMod.ID, "cut");
+    /** cliente -> servidor: pedir rebirth (boolean skip, só operadores). */
+    public static final Identifier REBIRTH_REQ = new Identifier(ReapMod.ID, "rebirth_req");
+    /** servidor -> cliente: abrir a tela de Rebirth. */
+    public static final Identifier OPEN_REBIRTH = new Identifier(ReapMod.ID, "open_rebirth");
     public static final Identifier LEVEL_UP = new Identifier(ReapMod.ID, "level_up");
 
     private ReapNet() {}
@@ -54,5 +58,9 @@ public final class ReapNet {
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(level);
         ServerPlayNetworking.send(p, LEVEL_UP, buf);
+    }
+
+    public static void sendOpenRebirth(ServerPlayerEntity p) {
+        ServerPlayNetworking.send(p, OPEN_REBIRTH, PacketByteBufs.create());
     }
 }

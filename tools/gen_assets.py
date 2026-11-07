@@ -400,7 +400,7 @@ TRAIN = [
 
 
 def train_plate_texture(color):
-    """Placa do chão (5x5 blocos): borda colorida com brilho + piso azul-acinzentado com ondas e azulejos. 64x64."""
+    """Placa do chão (~3,3x3,3 blocos): borda colorida com brilho + piso azul-acinzentado com ondas e azulejos. 64x64."""
     c = np.array(color, dtype=np.float32)
     S = 64
     img = np.zeros((S, S, 4), np.uint8)
@@ -428,8 +428,8 @@ def train_plate_texture(color):
 
 def gen_train(lang_pt, lang_en):
     """
-    Gelatina de treino GRANDE: 1 bloco "controlador" + blocos-parte invisíveis (3x3x3 de colisão).
-    O visual (placa 5x5 + gelatina ~3 blocos) é desenhado pelo BlockEntityRenderer a partir do modelo *_big
+    Gelatina de treino GRANDE: 1 bloco "controlador" + blocos-parte invisíveis (2x2x2 de colisão).
+    O visual (placa ~3,3x3,3 + gelatina ~2 blocos) é desenhado pelo BlockEntityRenderer a partir do modelo *_big
     (16 px de largura, ampliado 5x no jogo: placa 5 blocos, gelatina 3 de largura e 2,7 de altura).
     """
     tex_dir = os.path.join(ASSETS, "textures", "block")

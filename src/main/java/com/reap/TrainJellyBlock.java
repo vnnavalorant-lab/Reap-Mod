@@ -17,8 +17,8 @@ import net.minecraft.world.World;
 
 /**
  * Gelatina de treino GRANDE (como no jogo original): INQUEBRÁVEL, fica parada no lobby e nunca é devorada.
- * Este bloco é o "controlador" (centro da base). Ao colocar, ele preenche 3x3x3 com {@link TrainJellyPartBlock}
- * (colisão) e o cliente desenha a placa 5x5 + a gelatina grande (ver client/TrainJellyRenderer).
+ * Este bloco é o "controlador" (canto da base). Ao colocar, ele preenche 2x2x2 com {@link TrainJellyPartBlock}
+ * (colisão) e o cliente desenha a placa ~3,3x3,3 + a gelatina grande (ver client/TrainJellyRenderer).
  * Enquanto as colheres encostam, o jogador ganha XP multiplicado (se tiver os rebirths exigidos).
  */
 public class TrainJellyBlock extends Block implements BlockEntityProvider {
@@ -38,14 +38,14 @@ public class TrainJellyBlock extends Block implements BlockEntityProvider {
         return SHAPE;
     }
 
-    /** Só dá para colocar se houver espaço livre para a estrutura inteira (3x3x3). */
+    /** Só dá para colocar se houver espaço livre para a estrutura inteira (2x2x2). */
     @Override
     public BlockState getPlacementState(ItemPlacementContext ctx) {
         World w = ctx.getWorld();
         BlockPos o = ctx.getBlockPos();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dy = 0; dy <= 2; dy++) {
+        for (int dx = 0; dx <= 1; dx++) {
+            for (int dz = 0; dz <= 1; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
                     if (dx == 0 && dy == 0 && dz == 0) continue;
                     BlockPos p = o.add(dx, dy, dz);
                     if (w.isOutOfHeightLimit(p) || !w.getBlockState(p).isReplaceable()) return null;
@@ -59,9 +59,9 @@ public class TrainJellyBlock extends Block implements BlockEntityProvider {
     public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
         super.onPlaced(world, pos, state, placer, stack);
         if (world.isClient) return;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dy = 0; dy <= 2; dy++) {
+        for (int dx = 0; dx <= 1; dx++) {
+            for (int dz = 0; dz <= 1; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
                     if (dx == 0 && dy == 0 && dz == 0) continue;
                     world.setBlockState(pos.add(dx, dy, dz),
                             ReapMod.TRAIN_PART.getDefaultState().with(TrainJellyPartBlock.LAYER, dy), Block.NOTIFY_ALL);
@@ -75,9 +75,9 @@ public class TrainJellyBlock extends Block implements BlockEntityProvider {
     @Deprecated
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         if (!world.isClient && !state.isOf(newState.getBlock())) {
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    for (int dy = 0; dy <= 2; dy++) {
+            for (int dx = 0; dx <= 1; dx++) {
+                for (int dz = 0; dz <= 1; dz++) {
+                    for (int dy = 0; dy <= 1; dy++) {
                         if (dx == 0 && dy == 0 && dz == 0) continue;
                         BlockPos p = pos.add(dx, dy, dz);
                         if (world.getBlockState(p).getBlock() instanceof TrainJellyPartBlock) {

@@ -13,14 +13,14 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
 /**
- * Parte invisível de uma gelatina de treino grande (só dá a colisão 3x3x3). layer = altura (0..2) dentro da estrutura.
+ * Parte invisível de uma gelatina de treino grande (só dá a colisão 2x2x2). layer = altura (0..1) dentro da estrutura.
  * Tirar uma parte (no criativo) remove a estrutura inteira.
  */
 public class TrainJellyPartBlock extends Block {
-    public static final IntProperty LAYER = IntProperty.of("layer", 0, 2);
+    public static final IntProperty LAYER = IntProperty.of("layer", 0, 1);
     private static final VoxelShape FULL = Block.createCuboidShape(0, 0, 0, 16, 16, 16);
-    /** A gelatina tem ~2,7 blocos de altura: a camada de cima é mais baixa. */
-    private static final VoxelShape TOP = Block.createCuboidShape(0, 0, 0, 16, 11, 16);
+    /** A gelatina tem ~1,8 bloco de altura: a camada de cima é mais baixa. */
+    private static final VoxelShape TOP = Block.createCuboidShape(0, 0, 0, 16, 13, 16);
 
     public TrainJellyPartBlock(AbstractBlock.Settings settings) {
         super(settings);
@@ -35,13 +35,13 @@ public class TrainJellyPartBlock extends Block {
     @Override
     @Deprecated
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext ctx) {
-        return state.get(LAYER) == 2 ? TOP : FULL;
+        return state.get(LAYER) == 1 ? TOP : FULL;
     }
 
-    /** Posição do bloco controlador (centro da base) desta parte, ou null. */
+    /** Posição do bloco controlador (canto da base) desta parte, ou null. */
     public static BlockPos findController(BlockView w, BlockPos p, int layer) {
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
+        for (int dx = -1; dx <= 0; dx++) {
+            for (int dz = -1; dz <= 0; dz++) {
                 BlockPos c = p.add(dx, -layer, dz);
                 if (w.getBlockState(c).getBlock() instanceof TrainJellyBlock) return c;
             }

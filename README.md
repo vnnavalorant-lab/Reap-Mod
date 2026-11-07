@@ -40,8 +40,8 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
     única pontuação, que pertencem ao bloco do canto do grupo (menor X, depois menor Z). Os wins **não** são somados.
   - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
 - **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): **grandes como no jogo original**
-  (gelatina de ~3 blocos de largura e 2,7 de altura sobre uma placa 5x5). Ao colocar o bloco ele ocupa uma área livre de **3x3x3**
-  (o bloco clicado é o centro da base; precisa de espaço). São **inquebráveis** (só no criativo) e nunca são devoradas, balançam como
+  (gelatina de ~2 blocos de largura e 1,8 de altura sobre uma placa ~3,3x3,3). Ao colocar o bloco ele ocupa uma área livre de **2x2x2**
+  (o bloco clicado é o canto da base, e a estrutura se estende para +X, +Z e para cima; precisa de espaço). São **inquebráveis** (só no criativo) e nunca são devoradas, balançam como
   gelatina e balançam mais quando as colheres encostam. Enquanto as colheres encostam, o jogador ganha **XP** para subir de nível e chegar ao Rebirth mais rápido.
   Cada uma tem um multiplicador de XP e exige rebirths (senão aparece "Requer Rebirth N"). O texto sobre cada uma mostra o nome
   (verde, ou vermelho se ainda bloqueada) e o multiplicador:
@@ -81,3 +81,9 @@ Texturas animadas (brilho ondulante, bolhas, núcleo colorido), os 8 modelos de 
     python3 tools/gen_assets.py
 
 Para mudar cores ou nomes edite `TIERS` em `tools/gen_assets.py` (e `TYPES` em `ReapMod.java`, os ids precisam bater) e rode de novo.
+
+## Rebirth (GUI)
+- Abra com a tecla **R** (configurável em Controles > Reap) ou `/reap rebirth`. Tela igual ao jogo: "You get: +X% -> +Y%", "You need: Level N / M", botões **Rebirth**, **Skip** (só operadores) e **X**.
+- Máximo de **100** rebirths. Nível exigido = `50 + 5*rebirths/3` (50 no primeiro, 70 no 13º, 215 no último).
+- Cada rebirth dá **+25% de força** (`ReapData.STRENGTH_PCT_PER_REBIRTH`), que multiplica o poder das colheres e o dano nos mobs.
+- Renascer zera nível, XP, moedas (força), wins e colheres. Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.

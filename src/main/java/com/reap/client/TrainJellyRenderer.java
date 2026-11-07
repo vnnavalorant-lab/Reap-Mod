@@ -13,12 +13,12 @@ import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 
 /**
- * Desenha a gelatina de treino GRANDE: placa 5x5 + gelatina (~3 blocos de largura, 2,7 de altura), usando o modelo
- * "*_big" ampliado 5x, com um balanço de gelatina viva (mais forte quando as colheres acertam), e o letreiro em cima:
+ * Desenha a gelatina de treino GRANDE: placa ~3,3x3,3 + gelatina (2 blocos de largura, 1,8 de altura), usando o modelo
+ * "*_big" ampliado ~3,3x, com um balanço de gelatina viva (mais forte quando as colheres acertam), e o letreiro em cima:
  * nome em verde (vermelho se ainda bloqueada) e o multiplicador em branco.
  */
 public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEntity> {
-    private static final float SCALE = 5f;
+    private static final float SCALE = 10f / 3f;
 
     // último "acerto" de colher (para a gelatina balançar)
     private static double hitX, hitZ;
@@ -45,20 +45,20 @@ public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEn
         MinecraftClient mc = MinecraftClient.getInstance();
         if (be.getWorld() == null) return;
 
-        double cx = be.getPos().getX() + 0.5, cz = be.getPos().getZ() + 0.5;
+        double cx = be.getPos().getX() + 1.0, cz = be.getPos().getZ() + 1.0;
         double time = (be.getWorld().getTime() + td) / 20.0;
 
         // balanço: sempre um pouquinho, e mais forte logo depois de uma colherada perto dela
         float amp = 0.012f;
         double dt = (System.nanoTime() - hitNs) / 1e9;
         double dx = hitX - cx, dz = hitZ - cz;
-        if (dt < 0.8 && dx * dx + dz * dz < 3.2 * 3.2) amp += 0.055f * (float) Math.exp(-dt * 5.0);
+        if (dt < 0.8 && dx * dx + dz * dz < 2.2 * 2.2) amp += 0.055f * (float) Math.exp(-dt * 5.0);
         float wob = amp * (float) Math.sin(time * (dt < 0.8 ? 22.0 : 2.4));
 
         // ---- gelatina + placa (modelo escondido *_big ampliado)
         BlockState vis = ReapMod.TRAIN_VIS[tb.index].getDefaultState();
         ms.push();
-        ms.translate(0.5 - SCALE / 2, 0, 0.5 - SCALE / 2);
+        ms.translate(1.0 - SCALE / 2, 0, 1.0 - SCALE / 2);
         ms.scale(SCALE, SCALE, SCALE);
         // squash & stretch com o volume mantido (a base fica no chão)
         ms.translate(0.5, 0, 0.5);
@@ -74,7 +74,7 @@ public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEn
             locked = d != null && d.rebirths < t.req();
         }
         ms.push();
-        ms.translate(0.5, 3.45, 0.5);
+        ms.translate(1.0, 2.35, 1.0);
         ms.multiply(mc.gameRenderer.getCamera().getRotation());
         float s = 0.05f;
         ms.scale(-s, -s, s);

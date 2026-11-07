@@ -8,9 +8,15 @@ import net.minecraft.block.Block;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.render.RenderLayer;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
@@ -18,6 +24,8 @@ import net.minecraft.sound.SoundEvents;
 import java.util.UUID;
 
 public class ReapClient implements ClientModInitializer {
+    public static KeyBinding REBIRTH_KEY;
+
     @Override
     public void onInitializeClient() {
         for (Block b : ReapMod.JELLY) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
@@ -49,6 +57,17 @@ public class ReapClient implements ClientModInitializer {
                 client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_PLAYER_LEVELUP, 1.0f));
                 Fx.onLevelUp();
             });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(ReapNet.OPEN_REBIRTH, (client, handler, buf, sender) ->
+                client.execute(() -> client.setScreen(new RebirthScreen())));
+
+        REBIRTH_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.reap.rebirth", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, "key.categories.reap"));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (REBIRTH_KEY.wasPressed()) {
+                if (client.player != null && client.currentScreen == null) client.setScreen(new RebirthScreen());
+            }
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

@@ -64,6 +64,24 @@ public final class Hud {
         g.drawTextWithShadow(tr, "Rebirths: " + d.rebirths, 6, H / 2 - 8, 0xFFFFD43B);
         g.drawTextWithShadow(tr, "Multiplier: x" + d.multiplier(), 6, H / 2 + 4, 0xFF4FC3FF);
 
+        // botão de Rebirth (abre com a tecla, /reap rebirth): bolinha + "!" quando dá para renascer
+        {
+            int ix = 14, iy = H / 2 - 30, r = 9;
+            for (int y = -r; y <= r; y++) {
+                int hw = (int) Math.round(Math.sqrt(r * r - y * y));
+                int col = y < -1 ? 0xFFE0334A : (y > 1 ? 0xFFFFFFFF : 0xFF222222);
+                g.fill(ix - hw, iy + y, ix + hw + 1, iy + y + 1, col);
+            }
+            g.fill(ix - 2, iy - 2, ix + 3, iy + 3, 0xFF222222);
+            g.fill(ix - 1, iy - 1, ix + 2, iy + 2, 0xFFFFFFFF);
+            if (d.canRebirth()) {
+                g.fill(ix + 4, iy - 13, ix + 12, iy - 5, 0xFFE0334A);
+                g.drawTextWithShadow(tr, "!", ix + 7, iy - 12, 0xFFFFFFFF);
+            }
+            String key = ReapClient.REBIRTH_KEY == null ? "R" : ReapClient.REBIRTH_KEY.getBoundKeyLocalizedText().getString();
+            g.drawTextWithShadow(tr, "[" + key + "]", ix + 13, iy - 4, 0xFFCCCCCC);
+        }
+
         // LEVEL UP!
         long el = System.currentTimeMillis() - ClientData.levelUpAt;
         if (el >= 0 && el < 2400) {

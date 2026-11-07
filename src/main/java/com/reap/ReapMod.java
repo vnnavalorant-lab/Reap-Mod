@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -39,8 +40,7 @@ import java.util.*;
 
 public class ReapMod implements ModInitializer {
     public static final String ID = "reap";
-    public static final int REBIRTH_LEVEL = 50;
-
+    
     /** Ticks até a gelatina voltar depois de devorada (+ 40 por tier). */
     public static final int GOO_REGEN_TICKS = 200;
     /** Ticks sem ninguém comendo até a gelatina começar a se recuperar sozinha. */
@@ -91,7 +91,7 @@ public class ReapMod implements ModInitializer {
             new TrainType("train_r5",      "Rebirth 5", 5, 3f,   0xFF3CC8),
             new TrainType("train_r6",      "Rebirth 6", 6, 9f,   0xBEEEFF),
     };
-    /** Blocos colocáveis (controlador da estrutura 3x3x3). */
+    /** Blocos colocáveis (controlador da estrutura 2x2x2). */
     public static final Block[] TRAIN_BLOCKS = new Block[TRAIN.length];
     /** Blocos "visuais" escondidos (sem item): só fornecem o modelo grande para o renderer. */
     public static final Block[] TRAIN_VIS = new Block[TRAIN.length];
@@ -196,6 +196,37 @@ public class ReapMod implements ModInitializer {
         });
 
         CommandRegistrationCallback.EVENT.register(ReapCommands::register);
+
+        ServerPlayNetworking.registerGlobalReceiver(ReapNet.REBIRTH_REQ, (server, player, handler, buf, sender) -> {
+            boolean skip = buf.readBoolean();
+            server.execute(() -> doRebirth(server, player, skip));
+        });
+    }
+
+    /** Rebirth: exige o nível da fase (ou skip de operador), zera nível/XP/força(moedas)/wins/colheres e sobe +1 (máx. 100). */
+    public static void doRebirth(MinecraftServer server, ServerPlayerEntity p, boolean skip) {
+        ReapData d = ReapState.get(server).get(p.getUuid());
+        if (d.rebirths >= ReapData.MAX_REBIRTHS) {
+            p.sendMessage(Text.literal("Você já está no Rebirth máximo (" + ReapData.MAX_REBIRTHS + ")!").formatted(Formatting.RED), true);
+            return;
+        }
+        if (skip && !p.hasPermissionLevel(2)) {
+            p.sendMessage(Text.literal("Skip é só para operadores.").formatted(Formatting.RED), true);
+            return;
+        }
+        if (!skip && d.level < d.rebirthLevelReq()) {
+            p.sendMessage(Text.literal("Você precisa do nível " + d.rebirthLevelReq() + " para renascer.").formatted(Formatting.RED), true);
+            return;
+        }
+        d.level = 1;
+        d.xp = 0;
+        d.coins = 0;
+        d.wins = 0;
+        d.rebirths++;
+        markSync(server, p.getUuid());
+        p.getServerWorld().playSound(null, p.getBlockPos(), SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1f, 0.7f);
+        p.sendMessage(Text.literal("Rebirth " + d.rebirths + "! Força +" + ReapData.strengthPct(d.rebirths) + "%")
+                .formatted(Formatting.GREEN, Formatting.BOLD), true);
     }
 
     public static void markSync(MinecraftServer server, UUID id) {
@@ -300,7 +331,7 @@ public class ReapMod implements ModInitializer {
         long time = w.getTime();
         int n = d.spoons();
         Vec3d c = p.getPos().add(0, SpoonLogic.CENTER_Y, 0);
-        float dmg = 3f + d.level * 0.2f + d.rebirths * 1.5f;
+        float dmg = (3f + d.level * 0.2f) * ReapData.strengthFactor(d.rebirths);
 
         // quantas colheres encostaram em cada gelatina neste tick
         Map<Long, Integer> contacts = new HashMap<>();

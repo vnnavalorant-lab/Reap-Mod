@@ -32,17 +32,7 @@ public final class ReapCommands {
                     return 1;
                 }))
                 .then(CommandManager.literal("rebirth").executes(c -> {
-                    ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
-                    ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
-                    if (d.level < ReapMod.REBIRTH_LEVEL) {
-                        c.getSource().sendError(Text.literal("Você precisa do nível " + ReapMod.REBIRTH_LEVEL + " para renascer."));
-                        return 0;
-                    }
-                    d.level = 1;
-                    d.xp = 0;
-                    d.rebirths++;
-                    ReapMod.markSync(c.getSource().getServer(), p.getUuid());
-                    c.getSource().sendFeedback(() -> Text.literal("Rebirth " + d.rebirths + "! Multiplicador x" + d.multiplier()), false);
+                    ReapNet.sendOpenRebirth(c.getSource().getPlayerOrThrow());
                     return 1;
                 }))
                 .then(CommandManager.literal("setlevel").requires(s -> s.hasPermissionLevel(2))
@@ -63,7 +53,7 @@ public final class ReapCommands {
                             return 1;
                         })))
                 .then(CommandManager.literal("setrebirths").requires(s -> s.hasPermissionLevel(2))
-                        .then(CommandManager.argument("n", IntegerArgumentType.integer(0, 999)).executes(c -> {
+                        .then(CommandManager.argument("n", IntegerArgumentType.integer(0, ReapData.MAX_REBIRTHS)).executes(c -> {
                             ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
                             ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
                             d.rebirths = IntegerArgumentType.getInteger(c, "n");
