@@ -79,6 +79,13 @@ public class ReapMod implements ModInitializer {
     public static BlockEntityType<ReturnPadBlockEntity> PAD_BE;
 
     /**
+     * Blocos de loja de Reap: SHOP[i] vende a Reap de índice i + 1 (ver {@link Reaps#TIERS}); ids shop_1 .. shop_N.
+     * Ao pisar, gasta os wins da Reap e equipa ela (mais velocidade de destruição, cor nova).
+     */
+    public static final Block[] SHOP = new Block[Reaps.MAX];
+    public static BlockEntityType<ShopPadBlockEntity> SHOP_BE;
+
+    /**
      * Gelatinas de treino (inquebráveis, ficam no lobby): dão XP quando as colheres encostam.
      * req = rebirths necessários, mult = multiplicador de XP. Precisa bater com TRAIN em tools/gen_assets.py.
      */
@@ -152,6 +159,20 @@ public class ReapMod implements ModInitializer {
         PAD_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "return_pad"),
                 FabricBlockEntityTypeBuilder.create(ReturnPadBlockEntity::new, PADS).build());
 
+        for (int i = 0; i < SHOP.length; i++) {
+            String id = "shop_" + (i + 1);
+            Block b = Registry.register(Registries.BLOCK, new Identifier(ID, id),
+                    new ShopPadBlock(AbstractBlock.Settings.create()
+                            .mapColor(MapColor.RED)
+                            .strength(0.5f)
+                            .sounds(BlockSoundGroup.STONE)
+                            .nonOpaque(), i + 1));
+            Registry.register(Registries.ITEM, new Identifier(ID, id), new BlockItem(b, new Item.Settings()));
+            SHOP[i] = b;
+        }
+        SHOP_BE = Registry.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(ID, "shop_pad"),
+                FabricBlockEntityTypeBuilder.create(ShopPadBlockEntity::new, SHOP).build());
+
         for (int i = 0; i < TRAIN.length; i++) {
             TrainType t = TRAIN[i];
             Block b = Registry.register(Registries.BLOCK, new Identifier(ID, t.id()),
@@ -181,11 +202,13 @@ public class ReapMod implements ModInitializer {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(e -> {
             for (Block b : JELLY) e.add(b);
             for (Block b : PADS) e.add(b);
+            for (Block b : SHOP) e.add(b);
             for (Block b : TRAIN_BLOCKS) e.add(b);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(ReapMod::tick);
         ServerTickEvents.END_SERVER_TICK.register(ReturnPads::tick);
+        ServerTickEvents.END_SERVER_TICK.register(ShopPads::tick);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ReapState st = ReapState.get(server);
@@ -203,7 +226,7 @@ public class ReapMod implements ModInitializer {
         });
     }
 
-    /** Rebirth: exige o nível da fase (ou skip de operador), zera nível/XP/força(moedas)/wins/colheres e sobe +1 (máx. 100). */
+    /** Rebirth: exige o nível da fase (ou skip de operador), zera nível/XP/força(moedas)/wins/Reap da loja/colheres e sobe +1 (máx. 100). */
     public static void doRebirth(MinecraftServer server, ServerPlayerEntity p, boolean skip) {
         ReapData d = ReapState.get(server).get(p.getUuid());
         if (d.rebirths >= ReapData.MAX_REBIRTHS) {
@@ -222,6 +245,7 @@ public class ReapMod implements ModInitializer {
         d.xp = 0;
         d.coins = 0;
         d.wins = 0;
+        d.reapTier = 0; // volta para a primeira Reap e recomeça a progressão da loja
         d.rebirths++;
         markSync(server, p.getUuid());
         p.getServerWorld().playSound(null, p.getBlockPos(), SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1f, 0.7f);

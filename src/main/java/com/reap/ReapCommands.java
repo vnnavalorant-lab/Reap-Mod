@@ -18,9 +18,10 @@ public final class ReapCommands {
                     ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
                     ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
                     c.getSource().sendFeedback(() -> Text.literal(String.format(
-                            "Nível %d (%d/%d XP) | Moedas %d | Wins %d | Rebirths %d | Multiplicador x%d | Colheres %d (próxima no nível %d)",
+                            "Nível %d (%d/%d XP) | Moedas %d | Wins %d | Rebirths %d | Multiplicador x%d | Colheres %d (próxima no nível %d) | Reap %s (velocidade %s)",
                             d.level, d.xp, ReapData.xpNeeded(d.level), d.coins, d.wins, d.rebirths,
-                            d.multiplier(), d.spoons(), d.nextSpoonLevel())), false);
+                            d.multiplier(), d.spoons(), d.nextSpoonLevel(),
+                            Reaps.get(d.reapTier).namePt(), Reaps.speedLabel(Reaps.speed(d.reapTier)))), false);
                     return 1;
                 })
                 .then(CommandManager.literal("toggle").executes(c -> {
@@ -49,6 +50,14 @@ public final class ReapCommands {
                             ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
                             ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
                             d.wins = IntegerArgumentType.getInteger(c, "n");
+                            ReapMod.markSync(c.getSource().getServer(), p.getUuid());
+                            return 1;
+                        })))
+                .then(CommandManager.literal("setreap").requires(s -> s.hasPermissionLevel(2))
+                        .then(CommandManager.argument("n", IntegerArgumentType.integer(0, Reaps.MAX)).executes(c -> {
+                            ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
+                            ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
+                            d.reapTier = IntegerArgumentType.getInteger(c, "n");
                             ReapMod.markSync(c.getSource().getServer(), p.getUuid());
                             return 1;
                         })))

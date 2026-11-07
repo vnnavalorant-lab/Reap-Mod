@@ -39,7 +39,7 @@ public final class SpoonRenderer {
 
             int n = d.spoons();
             Vec3d c = p.getLerpedPos(td).add(0, SpoonLogic.CENTER_Y, 0);
-            float[] tint = Palette.spoon(d.rebirths);
+            float[] tint = Palette.spoon(d);
 
             for (int i = 0; i < n; i++) {
                 double a = SpoonLogic.angle(w.getTime(), td, i, n);

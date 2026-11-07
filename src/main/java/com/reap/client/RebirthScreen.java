@@ -157,7 +157,7 @@ public class RebirthScreen extends Screen {
         g.fill(bx, by, bx + fw, by + 2, 0xFF78FF78);
         otext(g, max ? "Max Rebirth!" : "Level " + d.level + " / " + need, bx + bw / 2f, by + bh / 2f, 1.5f, 0xFFFFFFFF, 3.5f);
 
-        otext(g, "Resets Strength, wins and spoons. Auras are kept!", cx, 146, 0.75f, 0xFFFF2020, 3.5f);
+        otext(g, "Resets Strength, wins and Reap. Auras are kept!", cx, 146, 0.75f, 0xFFFF2020, 3.5f);
 
         // Rebirth
         boolean hr = can && in(mx, my, RB_X, RB_Y, RB_W, RB_H);

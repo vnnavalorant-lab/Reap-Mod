@@ -32,6 +32,7 @@ public class ReapClient implements ClientModInitializer {
         for (Block b : ReapMod.TRAIN_VIS) BlockRenderLayerMap.INSTANCE.putBlock(b, RenderLayer.getTranslucent());
 
         BlockEntityRendererFactories.register(ReapMod.PAD_BE, ctx -> new ReturnPadRenderer(ctx.getTextRenderer()));
+        BlockEntityRendererFactories.register(ReapMod.SHOP_BE, ctx -> new ShopPadRenderer(ctx.getTextRenderer()));
         BlockEntityRendererFactories.register(ReapMod.TRAIN_BE, ctx -> new TrainJellyRenderer(ctx.getTextRenderer()));
 
         ClientPlayNetworking.registerGlobalReceiver(ReapNet.SYNC, (client, handler, buf, sender) -> {

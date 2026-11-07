@@ -39,6 +39,27 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   - Plataformas **encostadas se conectam** (sem borda entre elas) e funcionam como **um bloco só**: um único letreiro e uma
     única pontuação, que pertencem ao bloco do canto do grupo (menor X, depois menor Z). Os wins **não** são somados.
   - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
+- **Loja de Reaps** (`reap:shop_1` .. `reap:shop_10`, aba Blocos de Construção): plataforma vermelha com uma colher giratória na cor da Reap e o letreiro
+  "N Wins / xV Speed / Buy". Ao **pisar** nela o jogador gasta os wins e **equipa aquela Reap**: colher e rastro mudam de cor e a
+  **velocidade de destruição** (`ReapData.bitePower()`) é multiplicada. Só compra Reap melhor que a atual (pode pular níveis); o letreiro mostra
+  Buy / Need N more / Owned / Equipped. Para tentar de novo é preciso sair da plataforma e pisar outra vez. A tabela está em `Reaps.java`:
+
+  | Bloco | Reap | Custo | Velocidade |
+  |---|---|---|---|
+  | (inicial) | Branca | 0 | x1 |
+  | `shop_1` | Verde | 1 | x1.5 |
+  | `shop_2` | Pêssego | 2 | x2 |
+  | `shop_3` | Roxa | 4 | x2.75 |
+  | `shop_4` | Prata | 7 | x3.75 |
+  | `shop_5` | Rosa | 12 | x5 |
+  | `shop_6` | Amarela | 20 | x7 |
+  | `shop_7` | Laranja | 32 | x9.5 |
+  | `shop_8` | Ciano | 45 | x13 |
+  | `shop_9` | Vermelha | 60 | x18 |
+  | `shop_10` | Arco-íris | **80** | x25 |
+
+  **Rebirth zera a Reap** do jogador (volta para a branca, junto com os wins) e a progressão da loja recomeça. `/reap setreap <0-10>` (OP) para testar.
+  Para mudar preços/velocidades/cores edite `Reaps.TIERS` (e `SHOP` em `tools/gen_assets.py` se mudar nomes/custos dos blocos).
 - **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): **grandes como no jogo original**
   (gelatina de ~2 blocos de largura e 1,8 de altura sobre uma placa ~3,3x3,3). Ao colocar o bloco ele ocupa uma área livre de **2x2x2**
   (o bloco clicado é o canto da base, e a estrutura se estende para +X, +Z e para cima; precisa de espaço). São **inquebráveis** (só no criativo) e nunca são devoradas, balançam como
@@ -57,7 +78,7 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   XP por contato de colher = `(1 + nível/3) * multiplicador` (`TRAIN_XP_BASE` / `TRAIN_XP_PER_LEVEL` em `ReapMod.java`).
 - Colheres também ferem mobs/jogadores (PvP respeita server.properties).
 - Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` e `/reap setwins <n>` (OP).
-- Cor da colher/rastro muda a cada rebirth.
+- Cor da colher/rastro vem da Reap equipada na loja (volta à branca no rebirth).
 
 ## Ajustes rápidos
 - `ReapData`: curva de XP (`xpNeeded`), multiplicador, quantidade de colheres.
@@ -86,4 +107,4 @@ Para mudar cores ou nomes edite `TIERS` em `tools/gen_assets.py` (e `TYPES` em `
 - Abra com a tecla **R** (configurável em Controles > Reap) ou `/reap rebirth`. Tela igual ao jogo (ícone HD em `assets/reap/textures/gui/rebirth.png`, textos com contorno, botão **x** minúsculo): "You get: +X% -> +Y%", "You need: Level N / M", botões **Rebirth**, **Skip** (só operadores) e **X**.
 - Máximo de **100** rebirths. Nível exigido = `50 + 5*rebirths/3` (50 no primeiro, 70 no 13º, 215 no último).
 - Cada rebirth dá **+25% de força** (`ReapData.STRENGTH_PCT_PER_REBIRTH`), que multiplica o poder das colheres e o dano nos mobs.
-- Renascer zera nível, XP, moedas (força), wins e colheres. Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.
+- Renascer zera nível, XP, moedas (força), wins, colheres e a Reap da loja. Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.

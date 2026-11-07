@@ -423,7 +423,7 @@ public final class Fx {
             if (d == null || !d.enabled || p.isSpectator()) continue;
             int n = d.spoons();
             Vec3d c = p.getLerpedPos(td).add(0, SpoonLogic.CENTER_Y, 0);
-            active.add(new Active(p, d, n, c, Palette.trail(d.rebirths), (time + td) * SpoonLogic.ORBIT_SPEED));
+            active.add(new Active(p, d, n, c, Palette.trail(d), (time + td) * SpoonLogic.ORBIT_SPEED));
             for (int i = 0; i < n; i++) {
                 String key = p.getUuid() + "#" + i;
                 seen.add(key);

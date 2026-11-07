@@ -2,6 +2,7 @@ package com.reap.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.reap.ReapData;
+import com.reap.Reaps;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -70,6 +71,9 @@ public final class Hud {
         // rebirths / multiplicador
         g.drawTextWithShadow(tr, "Rebirths: " + d.rebirths, 6, H / 2 - 8, 0xFFFFD43B);
         g.drawTextWithShadow(tr, "Multiplier: x" + d.multiplier(), 6, H / 2 + 4, 0xFF4FC3FF);
+        Reaps.Tier reap = Reaps.get(d.reapTier);
+        g.drawTextWithShadow(tr, "Reap: " + reap.name() + " (" + Reaps.speedLabel(reap.speed()) + " speed)", 6, H / 2 + 16,
+                0xFF000000 | (d.reapTier == 0 ? 0xFFFFFF : reap.rgb()));
 
         // botão de Rebirth (tecla / /reap rebirth): ícone HD + "!" quando dá para renascer
         {

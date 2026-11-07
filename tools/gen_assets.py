@@ -320,6 +320,31 @@ def gen_pads(lang_pt, lang_en):
         lang_en[f"block.reap.{pid}"] = f"{cor_en} Return Pad +{wins} {w}"
 
 
+# ----------------------------------------------------------------------------- loja de Reaps
+# (nome pt, nome en, custo em wins). Precisa bater com Reaps.TIERS em Reaps.java (índice i + 1 = shop_{i+1}).
+SHOP = [
+    ("Verde", "Green", 1), ("Pêssego", "Peach", 2), ("Roxa", "Purple", 4), ("Prata", "Silver", 7),
+    ("Rosa", "Pink", 12), ("Amarela", "Yellow", 20), ("Laranja", "Orange", 32), ("Ciano", "Cyan", 45),
+    ("Vermelha", "Red", 60), ("Arco-íris", "Rainbow", 80),
+]
+
+
+def gen_shop(lang_pt, lang_en):
+    """Blocos de loja: mesma plataforma vermelha para todos (a colher e o letreiro são desenhados no cliente)."""
+    write_json(os.path.join(ASSETS, "models", "block", "shop_pad.json"), {
+        "parent": "reap:block/pad_item",
+        "textures": {"top": "reap:block/return_3", "side": "reap:block/return_3_side",
+                     "black": "reap:block/pad_black", "particle": "reap:block/return_3"}})
+    for i, (pt, en, cost) in enumerate(SHOP, start=1):
+        sid = f"shop_{i}"
+        write_json(os.path.join(ASSETS, "blockstates", f"{sid}.json"),
+                   {"variants": {"": {"model": "reap:block/shop_pad"}}})
+        write_json(os.path.join(ASSETS, "models", "item", f"{sid}.json"), {"parent": "reap:block/shop_pad"})
+        w = "Win" if cost == 1 else "Wins"
+        lang_pt[f"block.reap.{sid}"] = f"Loja de Reap {pt} ({cost} {w})"
+        lang_en[f"block.reap.{sid}"] = f"{en} Reap Shop Pad ({cost} {w})"
+
+
 # ----------------------------------------------------------------------------- texturas dos efeitos (pedaços e poças)
 def _smooth(a, b, x):
     t = np.clip((x - a) / (b - a), 0, 1)
@@ -513,6 +538,7 @@ def main():
         lang_en[f"block.reap.{bid}"] = en
 
     gen_pads(lang_pt, lang_en)
+    gen_shop(lang_pt, lang_en)
     gen_train(lang_pt, lang_en)
     gen_fx()
     write_json(os.path.join(ASSETS, "lang", "pt_br.json"), lang_pt)

@@ -1,22 +1,31 @@
 package com.reap.client;
 
+import com.reap.ReapData;
 import com.reap.ReapMod;
+import com.reap.Reaps;
 import net.minecraft.util.math.MathHelper;
 
-/** Cores por tier de rebirth. Tier 0 = colher branca com rastro ciano (igual ao vídeo). */
+/** Cores das Reaps (colheres) e dos efeitos. A cor da colher/rastro vem da Reap equipada (ver {@link Reaps}). */
 final class Palette {
-    private static final float[] HUES = {0f, 0.86f, 0.74f, 0.12f, 0.0f, 0.33f, 0.55f};
-
     private Palette() {}
 
-    static float[] spoon(int rebirths) {
-        int t = rebirths % HUES.length;
-        return t == 0 ? new float[]{1f, 1f, 1f} : rgb(HUES[t], 0.45f, 1f);
+    /** Cor (tint) da colher: a Reap inicial é branca; a final muda de cor sozinha (arco-íris). */
+    static float[] spoon(ReapData d) {
+        Reaps.Tier t = Reaps.get(d.reapTier);
+        if (t.rainbow()) return rgb((System.currentTimeMillis() % 3000L) / 3000f, 0.55f, 1f);
+        return unpack(t.rgb());
     }
 
-    static float[] trail(int rebirths) {
-        int t = rebirths % HUES.length;
-        return t == 0 ? new float[]{0.45f, 0.88f, 1f} : rgb(HUES[t], 0.75f, 1f);
+    /** Cor do rastro: a Reap inicial deixa rastro ciano (igual ao vídeo); as outras, na cor da própria Reap. */
+    static float[] trail(ReapData d) {
+        if (d.reapTier <= 0) return new float[]{0.45f, 0.88f, 1f};
+        Reaps.Tier t = Reaps.get(d.reapTier);
+        if (t.rainbow()) return rgb((System.currentTimeMillis() % 3000L) / 3000f, 0.8f, 1f);
+        return unpack(t.rgb());
+    }
+
+    static float[] unpack(int c) {
+        return new float[]{((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f};
     }
 
     /** Cor dos respingos de cada tipo de gelatina (a preta é clareada para os respingos aparecerem). */

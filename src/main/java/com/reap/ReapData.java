@@ -9,6 +9,8 @@ public class ReapData {
     public long xp = 0;
     public long coins = 0;
     public long wins = 0;
+    /** Reap (colher) equipada: índice em {@link Reaps#TIERS}. 0 = inicial. Volta a 0 no rebirth. */
+    public int reapTier = 0;
     public int rebirths = 0;
     public boolean enabled = true;
 
@@ -39,8 +41,8 @@ public class ReapData {
     /** Começa com 2 colheres, ganha +1 a cada 10 níveis ("Next Spoon At: Level 10"). */
     public int spoons() { return Math.min(12, 2 + level / 10); }
 
-    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível e os rebirths. */
-    public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths); }
+    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths e a Reap equipada (velocidade de destruição). */
+    public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier); }
 
     public int nextSpoonLevel() { return (level / 10 + 1) * 10; }
 
@@ -50,6 +52,7 @@ public class ReapData {
         n.putLong("xp", xp);
         n.putLong("coins", coins);
         n.putLong("wins", wins);
+        n.putInt("reap", reapTier);
         n.putInt("rebirths", rebirths);
         n.putBoolean("enabled", enabled);
     }
@@ -64,6 +67,7 @@ public class ReapData {
         d.xp = n.getLong("xp");
         d.coins = n.getLong("coins");
         d.wins = n.getLong("wins");
+        d.reapTier = Reaps.clamp(n.getInt("reap"));
         d.rebirths = Math.max(0, Math.min(MAX_REBIRTHS, n.getInt("rebirths")));
         d.enabled = !n.contains("enabled") || n.getBoolean("enabled");
         return d;
@@ -76,6 +80,7 @@ public class ReapData {
         b.writeVarInt(rebirths);
         b.writeBoolean(enabled);
         b.writeVarLong(wins);
+        b.writeVarInt(reapTier);
     }
 
     public static ReapData read(PacketByteBuf b) {
@@ -86,6 +91,7 @@ public class ReapData {
         d.rebirths = b.readVarInt();
         d.enabled = b.readBoolean();
         d.wins = b.readVarLong();
+        d.reapTier = Reaps.clamp(b.readVarInt());
         return d;
     }
 }

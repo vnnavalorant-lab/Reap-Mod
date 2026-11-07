@@ -1,0 +1,110 @@
+package com.reap.client;
+
+import com.reap.ReapData;
+import com.reap.Reaps;
+import com.reap.ShopPadBlock;
+import com.reap.ShopPadBlockEntity;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.render.LightmapTextureManager;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.RotationAxis;
+import net.minecraft.world.World;
+
+/** Loja de Reap: colher giratória (na cor da Reap) e letreiro "N Wins / xV Speed / Buy" sobre a plataforma. */
+public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> {
+    private final TextRenderer tr;
+
+    public ShopPadRenderer(TextRenderer tr) {
+        this.tr = tr;
+    }
+
+    @Override
+    public void render(ShopPadBlockEntity be, float td, MatrixStack ms, VertexConsumerProvider vcp, int light, int overlay) {
+        World w = be.getWorld();
+        if (w == null) return;
+        BlockState bs = be.getCachedState();
+        if (!(bs.getBlock() instanceof ShopPadBlock pad)) return;
+        Reaps.Tier t = Reaps.get(pad.tier);
+        float time = w.getTime() + td;
+
+        // colher em pé, girando devagar e flutuando (a concha do modelo aponta para cima)
+        float[] tint = t.rainbow()
+                ? Palette.spoon(rainbowOf(pad.tier))
+                : Palette.unpack(t.rgb());
+        ms.push();
+        ms.translate(0.5, 0.35 + Math.sin(time * 0.08) * 0.05, 0.5);
+        ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(time * 3f));
+        ms.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90f));
+        ms.scale(0.62f, 0.62f, 0.62f);
+        // mesma convenção do SpoonRenderer (modelo de entidade do Blockbench)
+        ms.scale(-1f, -1f, 1f);
+        ms.translate(0, -1.501, 0);
+        VertexConsumer vc = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(SpoonRenderer.TEX));
+        SpoonModel.get().render(ms, vc, LightmapTextureManager.MAX_LIGHT_COORDINATE,
+                OverlayTexture.DEFAULT_UV, tint[0], tint[1], tint[2], 1f);
+        ms.pop();
+
+        // estado para o jogador local
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ReapData d = mc.player == null ? null : ClientData.MAP.get(mc.player.getUuid());
+        String status;
+        int statusColor;
+        int costColor = 0xFFFFC21A;
+        if (d != null && d.reapTier >= pad.tier) {
+            boolean equipped = d.reapTier == pad.tier;
+            status = equipped ? "Equipped" : "Owned";
+            statusColor = equipped ? 0xFF4FC3FF : 0xFFAAAAAA;
+        } else if (d != null && d.wins < t.cost()) {
+            status = "Need " + (t.cost() - d.wins) + " more";
+            statusColor = 0xFFFF5555;
+            costColor = 0xFFFF8A8A;
+        } else {
+            status = "Buy";
+            statusColor = 0xFF3CFF3C;
+        }
+        String cost = t.cost() + (t.cost() == 1 ? " Win" : " Wins");
+        String speed = Reaps.speedLabel(t.speed()) + " Speed";
+
+        ms.push();
+        ms.translate(0.5, 2.55, 0.5);
+        ms.multiply(mc.gameRenderer.getCamera().getRotation());
+        float s = 0.03f;
+        ms.scale(-s, -s, s);
+        var mat = ms.peek().getPositionMatrix();
+        draw2(cost, -11, costColor, mat, vcp);
+        draw2(speed, 0, 0xFFFFFFFF, mat, vcp);
+        draw2(status, 11, statusColor, mat, vcp);
+        ms.pop();
+    }
+
+    /** Dados falsos só para reaproveitar a cor arco-íris da Palette. */
+    private static ReapData rainbowOf(int tier) {
+        ReapData d = new ReapData();
+        d.reapTier = tier;
+        return d;
+    }
+
+    private void draw2(String text, float y, int color, org.joml.Matrix4f mat, VertexConsumerProvider vcp) {
+        float x = -tr.getWidth(text) / 2f;
+        int faint = (color & 0x00FFFFFF) | 0x20000000;
+        tr.draw(text, x, y, faint, false, mat, vcp, TextRenderer.TextLayerType.SEE_THROUGH, 0x66000000, 0xF000F0);
+        tr.draw(text, x, y, color, false, mat, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
+    }
+
+    @Override
+    public boolean rendersOutsideBoundingBox(ShopPadBlockEntity be) {
+        return true; // colher e letreiro ficam fora da caixa do bloco
+    }
+
+    @Override
+    public int getRenderDistance() {
+        return 64;
+    }
+}
