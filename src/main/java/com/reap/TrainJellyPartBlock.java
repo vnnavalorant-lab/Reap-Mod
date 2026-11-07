@@ -50,11 +50,11 @@ public class TrainJellyPartBlock extends Block {
     }
 
     @Override
-    public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
         if (!world.isClient) {
             BlockPos c = findController(world, pos, state.get(LAYER));
             if (c != null) world.setBlockState(c, net.minecraft.block.Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
         }
-        return super.onBreak(world, pos, state, player);
+        super.onBreak(world, pos, state, player);
     }
 }
