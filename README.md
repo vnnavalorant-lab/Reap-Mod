@@ -83,7 +83,7 @@ Texturas animadas (brilho ondulante, bolhas, núcleo colorido), os 8 modelos de 
 Para mudar cores ou nomes edite `TIERS` em `tools/gen_assets.py` (e `TYPES` em `ReapMod.java`, os ids precisam bater) e rode de novo.
 
 ## Rebirth (GUI)
-- Abra com a tecla **R** (configurável em Controles > Reap) ou `/reap rebirth`. Tela igual ao jogo: "You get: +X% -> +Y%", "You need: Level N / M", botões **Rebirth**, **Skip** (só operadores) e **X**.
+- Abra com a tecla **R** (configurável em Controles > Reap) ou `/reap rebirth`. Tela igual ao jogo (ícone HD em `assets/reap/textures/gui/rebirth.png`, textos com contorno, botão **x** minúsculo): "You get: +X% -> +Y%", "You need: Level N / M", botões **Rebirth**, **Skip** (só operadores) e **X**.
 - Máximo de **100** rebirths. Nível exigido = `50 + 5*rebirths/3` (50 no primeiro, 70 no 13º, 215 no último).
 - Cada rebirth dá **+25% de força** (`ReapData.STRENGTH_PCT_PER_REBIRTH`), que multiplica o poder das colheres e o dano nos mobs.
 - Renascer zera nível, XP, moedas (força), wins e colheres. Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.

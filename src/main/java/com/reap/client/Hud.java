@@ -1,12 +1,16 @@
 package com.reap.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.reap.ReapData;
+import net.minecraft.util.Identifier;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 
 /** HUD no estilo do jogo: moedas, nível/XP, próxima colher, rebirths e multiplicador. */
 public final class Hud {
+    private static final Identifier REBIRTH_ICON = new Identifier("reap", "textures/gui/rebirth.png");
+
     private Hud() {}
 
     public static void render(DrawContext g, float td) {
@@ -19,67 +23,69 @@ public final class Hud {
         int W = g.getScaledWindowWidth(), H = g.getScaledWindowHeight();
         int cx = W / 2;
 
-        // moedas
+        // moedas e wins: chips de 17 px de altura, conteúdo centralizado (ícone 9x9 + texto, folga igual dos dois lados)
         String coins = fmt(d.coins);
-        int cw = tr.getWidth(coins) + 26;
-        int cl = cx - cw / 2;
-        g.fill(cl, 4, cl + cw, 20, 0xAA101010);
-        g.fill(cl, 4, cl + cw, 5, 0xFFFFC21A);
-        g.fill(cl + 5, 8, cl + 15, 18, 0xFFB8860B);
-        g.fill(cl + 6, 9, cl + 14, 17, 0xFFFFD43B);
-        g.fill(cl + 8, 11, cl + 12, 15, 0xFFFFF0A8);
-        g.drawTextWithShadow(tr, coins, cl + 19, 8, 0xFFFFE066);
-
-        // wins (troféu) ao lado das moedas
         String wins = fmt(d.wins);
-        int ww = tr.getWidth(wins) + 26;
+        int cw = 5 + 9 + 4 + tr.getWidth(coins) - 1 + 5;
+        int ww = 5 + 9 + 4 + tr.getWidth(wins) - 1 + 5;
+        int total = cw + 6 + ww;
+        int cl = cx - total / 2;
         int wl = cl + cw + 6;
-        g.fill(wl, 4, wl + ww, 20, 0xAA101010);
-        g.fill(wl, 4, wl + ww, 5, 0xFFFFC21A);
-        g.fill(wl + 6, 8, wl + 14, 13, 0xFFFFD43B);   // taça
-        g.fill(wl + 5, 9, wl + 6, 12, 0xFFB8860B);    // alças
-        g.fill(wl + 14, 9, wl + 15, 12, 0xFFB8860B);
-        g.fill(wl + 9, 13, wl + 11, 16, 0xFFFFD43B);  // haste
-        g.fill(wl + 7, 16, wl + 13, 18, 0xFFB8860B);  // base
-        g.fill(wl + 7, 9, wl + 9, 12, 0xFFFFF0A8);    // brilho
-        g.drawTextWithShadow(tr, wins, wl + 19, 8, 0xFFFFE066);
+        int top = 4, ch = 17;
+
+        g.fill(cl, top, cl + cw, top + ch, 0xAA101010);
+        g.fill(cl, top, cl + cw, top + 1, 0xFFFFC21A);
+        g.fill(cl + 5, top + 4, cl + 14, top + 13, 0xFFB8860B);   // ícone da moeda (9x9)
+        g.fill(cl + 6, top + 5, cl + 13, top + 12, 0xFFFFD43B);
+        g.fill(cl + 8, top + 7, cl + 11, top + 10, 0xFFFFF0A8);
+        g.drawTextWithShadow(tr, coins, cl + 5 + 9 + 4, top + 5, 0xFFFFE066);
+
+        g.fill(wl, top, wl + ww, top + ch, 0xAA101010);
+        g.fill(wl, top, wl + ww, top + 1, 0xFFFFC21A);
+        int tx = wl + 5, ty = top + 4;                              // troféu (9x9)
+        g.fill(tx + 2, ty, tx + 7, ty + 4, 0xFFFFD43B);            // taça
+        g.fill(tx, ty + 1, tx + 2, ty + 3, 0xFFB8860B);            // alças
+        g.fill(tx + 7, ty + 1, tx + 9, ty + 3, 0xFFB8860B);
+        g.fill(tx + 4, ty + 4, tx + 5, ty + 6, 0xFFFFD43B);        // haste
+        g.fill(tx + 2, ty + 6, tx + 7, ty + 9, 0xFFB8860B);        // base
+        g.fill(tx + 3, ty + 1, tx + 4, ty + 3, 0xFFFFF0A8);        // brilho
+        g.drawTextWithShadow(tr, wins, wl + 5 + 9 + 4, top + 5, 0xFFFFE066);
 
         // próxima colher
-        g.drawCenteredTextWithShadow(tr, "Next Spoon At: Level " + d.nextSpoonLevel(), cx, 24, 0xFFFFFFFF);
+        g.drawCenteredTextWithShadow(tr, "Next Spoon At: Level " + d.nextSpoonLevel(), cx, 25, 0xFFFFFFFF);
 
         // barra de nível
-        int bw = 180, bx = cx - bw / 2, by = 35, bh = 12;
+        int bw = 180, bx = cx - bw / 2, by = 36, bh = 13;
         long need = ReapData.xpNeeded(d.level);
         float frac = Math.min(1f, d.xp / (float) need);
         g.fill(bx - 1, by - 1, bx + bw + 1, by + bh + 1, 0xFF000000);
         g.fill(bx, by, bx + bw, by + bh, 0xFF0B3B1E);
         int fw = (int) (bw * frac);
         g.fill(bx, by, bx + fw, by + bh, 0xFF35B8FF);
-        g.fill(bx, by, bx + fw, by + 3, 0xFF8FDBFF);
-        g.drawTextWithShadow(tr, "Level " + d.level, bx + 4, by + 2, 0xFFFFFFFF);
+        g.fill(bx, by, bx + fw, by + 2, 0xFF8FDBFF);
+        g.drawTextWithShadow(tr, "Level " + d.level, bx + 4, by + 3, 0xFFFFFFFF);
         String xp = d.xp + "/" + need;
-        g.drawTextWithShadow(tr, xp, bx + bw - 4 - tr.getWidth(xp), by + 2, 0xFFFFFFFF);
+        g.drawTextWithShadow(tr, xp, bx + bw - 4 - (tr.getWidth(xp) - 1), by + 3, 0xFFFFFFFF);
 
         // rebirths / multiplicador
         g.drawTextWithShadow(tr, "Rebirths: " + d.rebirths, 6, H / 2 - 8, 0xFFFFD43B);
         g.drawTextWithShadow(tr, "Multiplier: x" + d.multiplier(), 6, H / 2 + 4, 0xFF4FC3FF);
 
-        // botão de Rebirth (abre com a tecla, /reap rebirth): bolinha + "!" quando dá para renascer
+        // botão de Rebirth (tecla / /reap rebirth): ícone HD + "!" quando dá para renascer
         {
-            int ix = 14, iy = H / 2 - 30, r = 9;
-            for (int y = -r; y <= r; y++) {
-                int hw = (int) Math.round(Math.sqrt(r * r - y * y));
-                int col = y < -1 ? 0xFFE0334A : (y > 1 ? 0xFFFFFFFF : 0xFF222222);
-                g.fill(ix - hw, iy + y, ix + hw + 1, iy + y + 1, col);
-            }
-            g.fill(ix - 2, iy - 2, ix + 3, iy + 3, 0xFF222222);
-            g.fill(ix - 1, iy - 1, ix + 2, iy + 2, 0xFFFFFFFF);
+            int ix = 6, iy = H / 2 - 44, sz = 26;
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            g.drawTexture(REBIRTH_ICON, ix, iy, sz, sz, 0, 0, 64, 64, 64, 64);
+            RenderSystem.disableBlend();
             if (d.canRebirth()) {
-                g.fill(ix + 4, iy - 13, ix + 12, iy - 5, 0xFFE0334A);
-                g.drawTextWithShadow(tr, "!", ix + 7, iy - 12, 0xFFFFFFFF);
+                g.fill(ix + sz - 9, iy - 1, ix + sz + 3, iy + 11, 0xFF000000);
+                g.fill(ix + sz - 8, iy, ix + sz + 2, iy + 10, 0xFFE0334A);
+                g.drawTextWithShadow(tr, "!", ix + sz - 5, iy + 1, 0xFFFFFFFF);
             }
             String key = ReapClient.REBIRTH_KEY == null ? "R" : ReapClient.REBIRTH_KEY.getBoundKeyLocalizedText().getString();
-            g.drawTextWithShadow(tr, "[" + key + "]", ix + 13, iy - 4, 0xFFCCCCCC);
+            String label = "[" + key + "]";
+            g.drawTextWithShadow(tr, label, ix + sz / 2 - (tr.getWidth(label) - 1) / 2, iy + sz + 2, 0xFFCCCCCC);
         }
 
         // LEVEL UP!
