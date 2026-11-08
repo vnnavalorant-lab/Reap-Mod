@@ -323,9 +323,9 @@ def gen_pads(lang_pt, lang_en):
 # ----------------------------------------------------------------------------- loja de Reaps
 # (nome pt, nome en, custo em wins). Precisa bater com Reaps.TIERS em Reaps.java (índice i + 1 = shop_{i+1}).
 SHOP = [
-    ("Verde", "Green", 1), ("Pêssego", "Peach", 2), ("Roxa", "Purple", 4), ("Prata", "Silver", 7),
-    ("Rosa", "Pink", 12), ("Amarela", "Yellow", 20), ("Laranja", "Orange", 32), ("Ciano", "Cyan", 45),
-    ("Vermelha", "Red", 60), ("Arco-íris", "Rainbow", 80),
+    ("Verde", "Green", 3), ("Pêssego", "Peach", 8), ("Roxa", "Purple", 18), ("Prata", "Silver", 40),
+    ("Rosa", "Pink", 90), ("Amarela", "Yellow", 200), ("Laranja", "Orange", 420), ("Ciano", "Cyan", 850),
+    ("Vermelha", "Red", 1700), ("Arco-íris", "Rainbow", 3200),
 ]
 
 

@@ -14,20 +14,20 @@ public class ReapData {
     public int rebirths = 0;
     public boolean enabled = true;
 
-    /** XP necessário para sair do nível dado (nível 9 ≈ 400, como no vídeo). */
+    /** XP necessário para sair do nível dado (5 * nível²; nível 50 acumula ~200 mil XP). */
     public static long xpNeeded(int level) {
-        return Math.max(25L, 5L * level * level);
+        return Math.max(40L, 5L * level * level);
     }
 
-    /** Versão do formato salvo. Saves antigos (rebirths do balanceamento velho) começam do zero. */
-    public static final int DATA_VERSION = 2;
+    /** Versão do formato salvo. Saves antigos (de balanceamentos anteriores) recomeçam do zero. */
+    public static final int DATA_VERSION = 3;
     /** Máximo de rebirths. */
     public static final int MAX_REBIRTHS = 100;
-    /** Bônus de força (%) por rebirth: +25% cada. Ajuste aqui para balancear (0..100 rebirths = +0%..+2500%). */
-    public static final int STRENGTH_PCT_PER_REBIRTH = 25;
+    /** Bônus de força (%) por rebirth: +15% cada (0..100 rebirths = +0%..+1500%). */
+    public static final int STRENGTH_PCT_PER_REBIRTH = 15;
 
-    /** Nível necessário para o PRÓXIMO rebirth (50 no começo, 70 no 13º como no vídeo, ~215 no último). */
-    public static int rebirthLevelReq(int rebirths) { return 50 + (5 * rebirths) / 3; }
+    /** Nível necessário para o PRÓXIMO rebirth: 50 no começo, +4 a cada rebirth (70 no 6º, 450 no último). */
+    public static int rebirthLevelReq(int rebirths) { return 50 + 4 * rebirths; }
     public int rebirthLevelReq() { return rebirthLevelReq(rebirths); }
     public boolean canRebirth() { return rebirths < MAX_REBIRTHS && level >= rebirthLevelReq(); }
 
@@ -35,26 +35,32 @@ public class ReapData {
     public static int strengthPct(int rebirths) { return rebirths * STRENGTH_PCT_PER_REBIRTH; }
     public static float strengthFactor(int rebirths) { return 1f + strengthPct(rebirths) / 100f; }
 
-    /** No jogo: 7 rebirths = x9. */
-    public int multiplier() { return rebirths + 2; }
+    /** Multiplicador de recompensas: x2 no início, +1 a cada 2 rebirths (6 rebirths = x5). */
+    public int multiplier() { return 2 + rebirths / 2; }
 
     /** Máximo de colheres girando em volta do jogador. */
     public static final int MAX_SPOONS = 12;
 
-    /** Começa com 1 colher e ganha +1 a cada 2 rebirths (nível não dá mais colher). */
-    public int spoons() { return Math.min(MAX_SPOONS, 1 + rebirths / 2); }
+    /** A cada quantos rebirths ganha uma colher nova. */
+    public static final int SPOON_EVERY = 3;
+
+    /** Começa com 1 colher e ganha +1 a cada {@link #SPOON_EVERY} rebirths (nível não dá colher). */
+    public int spoons() { return Math.min(MAX_SPOONS, 1 + rebirths / SPOON_EVERY); }
 
     /** Divisor da Força (moedas): quanto maior, menos a Força acelera a colher. Bônus = sqrt(moedas) / COIN_DIV. */
-    public static final double COIN_DIV = 25.0;
+    public static final double COIN_DIV = 60.0;
 
     /** Multiplicador de velocidade de destruição vindo da Força (moedas): mais Força = colher mais rápida (cresce com raiz quadrada). */
     public float coinFactor() { return (float) (1.0 + Math.sqrt(Math.max(0L, coins)) / COIN_DIV); }
 
-    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths, a Força (moedas) e a Reap equipada (velocidade de destruição). */
-    public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier) * coinFactor(); }
+    /** Bônus de poder de mordida por nível (+10% por nível). */
+    public static final float LEVEL_POWER = 0.10f;
 
-    /** Rebirth em que ganha a próxima colher (de 2 em 2). */
-    public int nextSpoonRebirth() { return (rebirths / 2 + 1) * 2; }
+    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths, a Força (moedas) e a Reap equipada (velocidade de destruição). */
+    public float bitePower() { return (1f + LEVEL_POWER * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier) * coinFactor(); }
+
+    /** Rebirth em que ganha a próxima colher. */
+    public int nextSpoonRebirth() { return (rebirths / SPOON_EVERY + 1) * SPOON_EVERY; }
 
     public void write(NbtCompound n) {
         n.putInt("dv", DATA_VERSION);

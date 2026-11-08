@@ -57,15 +57,15 @@ public class ReapMod implements ModInitializer {
     public record JellyType(String id, int rgb, int hp, int reward, MapColor map) {}
 
     public static final JellyType[] TYPES = {
-            new JellyType("goo",        0xFF54BC,    14, 1, MapColor.PINK),     // rosa (a original)
-            new JellyType("goo_red",    0xE8243A,   50, 4, MapColor.RED),
-            new JellyType("goo_orange", 0xFF8A1C,   150, 12, MapColor.ORANGE),
-            new JellyType("goo_yellow", 0xFFD628,   420, 35, MapColor.YELLOW),
-            new JellyType("goo_green",  0x40D648,  1100, 100, MapColor.LIME),
-            new JellyType("goo_cyan",   0x2CD6EC,  3000, 300, MapColor.CYAN),
-            new JellyType("goo_blue",   0x3A62FF,  8500, 900, MapColor.BLUE),
-            new JellyType("goo_purple", 0x9442EA, 24000, 2700, MapColor.PURPLE),
-            new JellyType("goo_black",  0x342E54, 70000, 8000, MapColor.BLACK),
+            new JellyType("goo",        0xFF54BC,     20, 1, MapColor.PINK),     // rosa (a original)
+            new JellyType("goo_red",    0xE8243A,     70, 4, MapColor.RED),
+            new JellyType("goo_orange", 0xFF8A1C,    220, 12, MapColor.ORANGE),
+            new JellyType("goo_yellow", 0xFFD628,    650, 36, MapColor.YELLOW),
+            new JellyType("goo_green",  0x40D648,   1900, 105, MapColor.LIME),
+            new JellyType("goo_cyan",   0x2CD6EC,   5500, 310, MapColor.CYAN),
+            new JellyType("goo_blue",   0x3A62FF,  16000, 900, MapColor.BLUE),
+            new JellyType("goo_purple", 0x9442EA,  48000, 2600, MapColor.PURPLE),
+            new JellyType("goo_black",  0x342E54, 140000, 7500, MapColor.BLACK),
     };
 
     public static final Block[] JELLY = new Block[TYPES.length];
@@ -93,10 +93,10 @@ public class ReapMod implements ModInitializer {
 
     public static final TrainType[] TRAIN = {
             new TrainType("train_starter", "Starter",   0, 1f,   0x50D7FF),
-            new TrainType("train_r1",      "Rebirth 1", 1, 1.5f, 0x5ADC50),
-            new TrainType("train_r3",      "Rebirth 3", 3, 2f,   0xFFE25A),
-            new TrainType("train_r5",      "Rebirth 5", 5, 3f,   0xFF3CC8),
-            new TrainType("train_r6",      "Rebirth 6", 6, 9f,   0xBEEEFF),
+            new TrainType("train_r1",      "Rebirth 1", 1, 1.4f, 0x5ADC50),
+            new TrainType("train_r3",      "Rebirth 3", 3, 1.9f, 0xFFE25A),
+            new TrainType("train_r5",      "Rebirth 5", 5, 2.5f, 0xFF3CC8),
+            new TrainType("train_r6",      "Rebirth 6", 6, 3.5f, 0xBEEEFF),
     };
     /** Blocos colocáveis (controlador da estrutura 2x2x2). */
     public static final Block[] TRAIN_BLOCKS = new Block[TRAIN.length];
@@ -359,7 +359,7 @@ public class ReapMod implements ModInitializer {
         long time = w.getTime();
         int n = d.spoons();
         Vec3d c = p.getPos().add(0, SpoonLogic.CENTER_Y, 0);
-        float dmg = (3f + d.level * 0.2f) * ReapData.strengthFactor(d.rebirths);
+        float dmg = (3f + d.level * 0.1f) * ReapData.strengthFactor(d.rebirths);
 
         // quantas colheres encostaram em cada gelatina neste tick
         Map<Long, Integer> contacts = new HashMap<>();
