@@ -118,11 +118,8 @@ public class RebirthScreen extends Screen {
         g.getMatrices().translate(ox, oy, 0);
         g.getMatrices().scale(sc, sc, 1f);
 
-        // painel: contorno preto + degradê translúcido
-        g.fill(-2, 0, PW + 2, PH, 0xFF080A0E);
-        g.fill(0, -2, PW, PH + 2, 0xFF080A0E);
-        g.fill(-1, -1, PW + 1, PH + 1, 0xFF080A0E);
-        g.fillGradient(0, 0, PW, PH, 0xE116647F, 0xE1766270);
+        // painel: fundo todo preto com 80% de opacidade
+        g.fill(0, 0, PW, PH, 0xCC000000);
 
         // título: ícone HD + "Rebirth" (grupo centralizado)
         int tw = (int) ((textRenderer.getWidth("Rebirth") - 1) * 2f);

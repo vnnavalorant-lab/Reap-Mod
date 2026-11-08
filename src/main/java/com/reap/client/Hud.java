@@ -53,7 +53,7 @@ public final class Hud {
         g.drawTextWithShadow(tr, wins, wl + 5 + 9 + 4, top + 5, 0xFFFFE066);
 
         // próxima colher
-        g.drawCenteredTextWithShadow(tr, "Next Spoon At: Level " + d.nextSpoonLevel(), cx, 25, 0xFFFFFFFF);
+        g.drawCenteredTextWithShadow(tr, d.spoons() >= ReapData.MAX_SPOONS ? "Max Spoons!" : "Next Spoon At: Rebirth " + d.nextSpoonRebirth(), cx, 25, 0xFFFFFFFF);
 
         // barra de nível
         int bw = 180, bx = cx - bw / 2, by = 36, bh = 13;

@@ -38,13 +38,17 @@ public class ReapData {
     /** No jogo: 7 rebirths = x9. */
     public int multiplier() { return rebirths + 2; }
 
-    /** Começa com 2 colheres, ganha +1 a cada 10 níveis ("Next Spoon At: Level 10"). */
-    public int spoons() { return Math.min(12, 2 + level / 10); }
+    /** Máximo de colheres girando em volta do jogador. */
+    public static final int MAX_SPOONS = 12;
+
+    /** Começa com 1 colher e ganha +1 a cada 2 rebirths (nível não dá mais colher). */
+    public int spoons() { return Math.min(MAX_SPOONS, 1 + rebirths / 2); }
 
     /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths e a Reap equipada (velocidade de destruição). */
     public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier); }
 
-    public int nextSpoonLevel() { return (level / 10 + 1) * 10; }
+    /** Rebirth em que ganha a próxima colher (de 2 em 2). */
+    public int nextSpoonRebirth() { return (rebirths / 2 + 1) * 2; }
 
     public void write(NbtCompound n) {
         n.putInt("dv", DATA_VERSION);

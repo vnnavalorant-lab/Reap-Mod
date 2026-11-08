@@ -226,7 +226,7 @@ public class ReapMod implements ModInitializer {
         });
     }
 
-    /** Rebirth: exige o nível da fase (ou skip de operador), zera nível/XP/força(moedas)/wins/Reap da loja/colheres e sobe +1 (máx. 100). */
+    /** Rebirth: exige o nível da fase (ou skip de operador), zera nível/XP/força(moedas)/wins/Reap da loja e sobe +1 (máx. 100). */
     public static void doRebirth(MinecraftServer server, ServerPlayerEntity p, boolean skip) {
         ReapData d = ReapState.get(server).get(p.getUuid());
         if (d.rebirths >= ReapData.MAX_REBIRTHS) {
@@ -241,6 +241,7 @@ public class ReapMod implements ModInitializer {
             p.sendMessage(Text.literal("Você precisa do nível " + d.rebirthLevelReq() + " para renascer.").formatted(Formatting.RED), true);
             return;
         }
+        int spoonsBefore = d.spoons();
         d.level = 1;
         d.xp = 0;
         d.coins = 0;
@@ -251,6 +252,9 @@ public class ReapMod implements ModInitializer {
         p.getServerWorld().playSound(null, p.getBlockPos(), SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1f, 0.7f);
         p.sendMessage(Text.literal("Rebirth " + d.rebirths + "! Força +" + ReapData.strengthPct(d.rebirths) + "%")
                 .formatted(Formatting.GREEN, Formatting.BOLD), true);
+        if (d.spoons() > spoonsBefore) {
+            p.sendMessage(Text.literal("Nova colher desbloqueada!").formatted(Formatting.AQUA, Formatting.BOLD), false);
+        }
     }
 
     public static void markSync(MinecraftServer server, UUID id) {
@@ -487,7 +491,6 @@ public class ReapMod implements ModInitializer {
 
     /** Soma XP, sobe de nível e avisa o cliente. */
     private static void addXp(MinecraftServer server, ServerPlayerEntity p, ReapData d, long xp) {
-        int spoonsBefore = d.spoons();
         d.xp += xp;
         boolean up = false;
         while (d.xp >= ReapData.xpNeeded(d.level)) {
@@ -498,15 +501,11 @@ public class ReapMod implements ModInitializer {
         markSync(server, p.getUuid());
         if (up) {
             ReapNet.sendLevelUp(p, d.level);
-            if (d.spoons() > spoonsBefore) {
-                p.sendMessage(Text.literal("Nova colher desbloqueada!").formatted(Formatting.AQUA, Formatting.BOLD), true);
-            }
         }
     }
 
     private static void reward(MinecraftServer server, ReapState st, ServerWorld w, ServerPlayerEntity p,
                                ReapData d, int amount, Vec3d at, int kind, int tier) {
-        int spoonsBefore = d.spoons();
         d.coins += amount;
         d.xp += amount;
         boolean up = false;
@@ -519,9 +518,6 @@ public class ReapMod implements ModInitializer {
         ReapNet.sendCut(w, at, p.getUuid(), amount, kind, tier);
         if (up) {
             ReapNet.sendLevelUp(p, d.level);
-            if (d.spoons() > spoonsBefore) {
-                p.sendMessage(Text.literal("Nova colher desbloqueada!").formatted(Formatting.AQUA, Formatting.BOLD), true);
-            }
         }
     }
 }

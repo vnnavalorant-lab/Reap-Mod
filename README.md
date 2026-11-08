@@ -1,7 +1,7 @@
 # Reap – Spoons (Fabric 1.20.1)
 
 Mod inspirado no jogo do vídeo: colheres giram em volta do jogador como hélice, cortam gosma rosa,
-dão moedas/XP com multiplicador, sobem de nível (nova colher a cada 10 níveis) e fazem rebirth.
+dão moedas/XP com multiplicador, sobem de nível (nova colher a cada 2 rebirths) e fazem rebirth.
 
 ## Compilar
 Requer JDK 17. Use o wrapper de qualquer projeto Fabric (ou instale o Gradle 8.6+):
@@ -57,7 +57,7 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   | `shop_9` | Vermelha | 60 | x18 |
   | `shop_10` | Arco-íris | **80** | x25 |
 
-  **Rebirth zera a Reap** do jogador (volta para a branca, junto com os wins) e a progressão da loja recomeça. `/reap setreap <0-10>` (OP) para testar.
+  **Rebirth zera a Reap** do jogador (volta para a branca, junto com os wins) e a progressão da loja recomeça. `/reap setreap <0-10>` (OP) para testar e `/reap resetshop [jogadores]` (OP) para resetar a loja (volta para a primeira Reap; wins não são devolvidos).
   Para mudar preços/velocidades/cores edite `Reaps.TIERS` (e `SHOP` em `tools/gen_assets.py` se mudar nomes/custos dos blocos).
 - **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): **grandes como no jogo original**
   (gelatina de ~2 blocos de largura e 1,8 de altura sobre uma placa ~3,3x3,3). Ao colocar o bloco ele ocupa uma área livre de **2x2x2**
@@ -106,4 +106,4 @@ Para mudar cores ou nomes edite `TIERS` em `tools/gen_assets.py` (e `TYPES` em `
 - Abra com a tecla **R** (configurável em Controles > Reap) ou `/reap rebirth`. Tela igual ao jogo (ícone HD em `assets/reap/textures/gui/rebirth.png`, textos com contorno, botão **x** minúsculo): "You get: +X% -> +Y%", "You need: Level N / M", botões **Rebirth**, **Skip** (só operadores) e **X**.
 - Máximo de **100** rebirths. Nível exigido = `50 + 5*rebirths/3` (50 no primeiro, 70 no 13º, 215 no último).
 - Cada rebirth dá **+25% de força** (`ReapData.STRENGTH_PCT_PER_REBIRTH`), que multiplica o poder das colheres e o dano nos mobs.
-- Renascer zera nível, XP, moedas (força), wins, colheres e a Reap da loja. Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.
+- Renascer zera nível, XP, moedas (força), wins e a Reap da loja (as colheres ganhas por rebirth ficam). Saves antigos (formato < 2) recomeçam do nível 1 / rebirth 0.

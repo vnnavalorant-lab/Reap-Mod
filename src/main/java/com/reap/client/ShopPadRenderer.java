@@ -22,6 +22,7 @@ import net.minecraft.world.World;
 public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> {
     /** Textura azul da plataforma (a mesma da plataforma de retorno azul). */
     private static final Identifier BLUE = new Identifier("reap", "textures/block/return_300.png");
+    private static final Identifier BLUE_SIDE = new Identifier("reap", "textures/block/return_300_side.png");
 
     private final TextRenderer tr;
 
@@ -60,16 +61,18 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
         ReapData d = mc.player == null ? null : ClientData.MAP.get(mc.player.getUuid());
         int cur = d == null ? 0 : d.reapTier;
 
-        // Reap já comprada: a plataforma fica azul (só para quem comprou) e sem texto
+        // Reap já comprada: toda a parte vermelha (topo + laterais) vira azul, só para quem comprou, e sem texto
         if (cur >= pad.tier) {
             MatrixStack.Entry e = ms.peek();
-            VertexConsumer bv = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(BLUE));
-            float y = 3f / 16f + 0.002f, lo = 1f / 16f, hi = 15f / 16f;
             int lt = LightmapTextureManager.MAX_LIGHT_COORDINATE;
-            quadVertex(bv, e, lo, y, lo, 0f, 0f, lt);
-            quadVertex(bv, e, lo, y, hi, 0f, 1f, lt);
-            quadVertex(bv, e, hi, y, hi, 1f, 1f, lt);
-            quadVertex(bv, e, hi, y, lo, 1f, 0f, lt);
+            final float lo = 1f / 16f, hi = 15f / 16f, y0 = 2f / 16f, y1 = 3f / 16f, o = 0.002f;
+            VertexConsumer top = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(BLUE));
+            quad(top, e, lt, 0, 1, 0, lo, y1 + o, lo, lo, y1 + o, hi, hi, y1 + o, hi, hi, y1 + o, lo);
+            VertexConsumer side = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(BLUE_SIDE));
+            quad(side, e, lt, 0, 0, -1, lo, y0, lo - o, hi, y0, lo - o, hi, y1, lo - o, lo, y1, lo - o); // norte
+            quad(side, e, lt, 0, 0, 1, lo, y0, hi + o, hi, y0, hi + o, hi, y1, hi + o, lo, y1, hi + o);   // sul
+            quad(side, e, lt, -1, 0, 0, lo - o, y0, lo, lo - o, y0, hi, lo - o, y1, hi, lo - o, y1, lo);  // oeste
+            quad(side, e, lt, 1, 0, 0, hi + o, y0, lo, hi + o, y0, hi, hi + o, y1, hi, hi + o, y1, lo);   // leste
             return;
         }
         // só a Reap seguinte mostra custo e quanto de velocidade ela adiciona; as mais distantes ficam sem texto
@@ -101,9 +104,20 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
         ms.pop();
     }
 
-    private static void quadVertex(VertexConsumer vc, MatrixStack.Entry e, float x, float y, float z, float u, float v, int light) {
+    /** Quad com 4 vértices (x,y,z cada) e normal (nx,ny,nz); UV cobre a textura inteira. */
+    private static void quad(VertexConsumer vc, MatrixStack.Entry e, int light, float nx, float ny, float nz,
+                             float x1, float y1, float z1, float x2, float y2, float z2,
+                             float x3, float y3, float z3, float x4, float y4, float z4) {
+        vtx(vc, e, x1, y1, z1, 0f, 0f, light, nx, ny, nz);
+        vtx(vc, e, x2, y2, z2, 0f, 1f, light, nx, ny, nz);
+        vtx(vc, e, x3, y3, z3, 1f, 1f, light, nx, ny, nz);
+        vtx(vc, e, x4, y4, z4, 1f, 0f, light, nx, ny, nz);
+    }
+
+    private static void vtx(VertexConsumer vc, MatrixStack.Entry e, float x, float y, float z, float u, float v,
+                            int light, float nx, float ny, float nz) {
         vc.vertex(e.getPositionMatrix(), x, y, z).color(255, 255, 255, 255).texture(u, v)
-                .overlay(OverlayTexture.DEFAULT_UV).light(light).normal(e.getNormalMatrix(), 0f, 1f, 0f).next();
+                .overlay(OverlayTexture.DEFAULT_UV).light(light).normal(e.getNormalMatrix(), nx, ny, nz).next();
     }
 
     /** Dados falsos só para reaproveitar a cor arco-íris da Palette. */

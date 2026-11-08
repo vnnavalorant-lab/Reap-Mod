@@ -3,6 +3,7 @@ package com.reap;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.minecraft.command.CommandRegistryAccess;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -11,6 +12,18 @@ import net.minecraft.text.Text;
 public final class ReapCommands {
     private ReapCommands() {}
 
+    /** Reseta a loja: o jogador volta para a primeira Reap (os wins não são devolvidos). */
+    private static void resetShop(ServerCommandSource src, java.util.Collection<ServerPlayerEntity> targets) {
+        ReapState st = ReapState.get(src.getServer());
+        for (ServerPlayerEntity t : targets) {
+            st.get(t.getUuid()).reapTier = 0;
+            ReapMod.markSync(src.getServer(), t.getUuid());
+            t.sendMessage(Text.literal("Sua loja de Reaps foi resetada: você voltou para a primeira Reap."), false);
+        }
+        int n = targets.size();
+        src.sendFeedback(() -> Text.literal("Loja resetada para " + n + (n == 1 ? " jogador." : " jogadores.")), true);
+    }
+
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess access, CommandManager.RegistrationEnvironment env) {
         dispatcher.register(CommandManager.literal("reap")
@@ -18,9 +31,9 @@ public final class ReapCommands {
                     ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
                     ReapData d = ReapState.get(c.getSource().getServer()).get(p.getUuid());
                     c.getSource().sendFeedback(() -> Text.literal(String.format(
-                            "Nível %d (%d/%d XP) | Moedas %d | Wins %d | Rebirths %d | Multiplicador x%d | Colheres %d (próxima no nível %d) | Reap %s (velocidade %s)",
+                            "Nível %d (%d/%d XP) | Moedas %d | Wins %d | Rebirths %d | Multiplicador x%d | Colheres %d (próxima no rebirth %d) | Reap %s (velocidade %s)",
                             d.level, d.xp, ReapData.xpNeeded(d.level), d.coins, d.wins, d.rebirths,
-                            d.multiplier(), d.spoons(), d.nextSpoonLevel(),
+                            d.multiplier(), d.spoons(), d.nextSpoonRebirth(),
                             Reaps.get(d.reapTier).namePt(), Reaps.speedLabel(Reaps.speed(d.reapTier)))), false);
                     return 1;
                 })
@@ -60,6 +73,17 @@ public final class ReapCommands {
                             d.reapTier = IntegerArgumentType.getInteger(c, "n");
                             ReapMod.markSync(c.getSource().getServer(), p.getUuid());
                             return 1;
+                        })))
+                .then(CommandManager.literal("resetshop").requires(s -> s.hasPermissionLevel(2))
+                        .executes(c -> {
+                            ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
+                            resetShop(c.getSource(), java.util.List.of(p));
+                            return 1;
+                        })
+                        .then(CommandManager.argument("players", EntityArgumentType.players()).executes(c -> {
+                            java.util.Collection<ServerPlayerEntity> targets = EntityArgumentType.getPlayers(c, "players");
+                            resetShop(c.getSource(), targets);
+                            return targets.size();
                         })))
                 .then(CommandManager.literal("setrebirths").requires(s -> s.hasPermissionLevel(2))
                         .then(CommandManager.argument("n", IntegerArgumentType.integer(0, ReapData.MAX_REBIRTHS)).executes(c -> {
