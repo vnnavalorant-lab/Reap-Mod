@@ -19,6 +19,8 @@ import net.minecraft.client.util.math.MatrixStack;
  */
 public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEntity> {
     private static final float SCALE = 10f / 3f;
+    /** Distância da sombra ao texto (em pixels da fonte; o vanilla usa 1.0). */
+    private static final float SHADOW_OFFSET = 0.5f;
 
     // último "acerto" de colher (para a gelatina balançar)
     private static double hitX, hitZ;
@@ -95,7 +97,7 @@ public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEn
      */
     private void label(String text, float x, float y, int color, MatrixStack ms, VertexConsumerProvider vcp) {
         int shadow = 0xFF000000 | ((color & 0xFCFCFC) >> 2);
-        var back = new org.joml.Matrix4f(ms.peek().getPositionMatrix()).translate(1f, 1f, 2f);
+        var back = new org.joml.Matrix4f(ms.peek().getPositionMatrix()).translate(SHADOW_OFFSET, SHADOW_OFFSET, 1f);
         tr.draw(text, x, y, shadow, false, back, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
         tr.draw(text, x, y, color, false, ms.peek().getPositionMatrix(), vcp, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, 0xF000F0);
     }
