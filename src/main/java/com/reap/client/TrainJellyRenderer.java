@@ -89,13 +89,13 @@ public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEn
     /**
      * Texto com sombra desenhada manualmente. O vanilla deixa a sombra quase no mesmo plano do texto e, de longe,
      * a precisão do depth buffer faz a sombra "ganhar" e aparecer NA FRENTE. Aqui:
-     *  - a sombra fica bem atrás do texto (z negativo = longe da câmera) e usa a camada normal;
+     *  - a sombra fica bem atrás do texto (z POSITIVO = longe da câmera, por causa da escala negativa) e usa a camada normal;
      *  - o texto da frente usa a camada POLYGON_OFFSET, que é puxada para a câmera pela própria GPU
      *    (offset de profundidade proporcional à distância), então vence a sombra em qualquer distância.
      */
     private void label(String text, float x, float y, int color, MatrixStack ms, VertexConsumerProvider vcp) {
         int shadow = 0xFF000000 | ((color & 0xFCFCFC) >> 2);
-        var back = new org.joml.Matrix4f(ms.peek().getPositionMatrix()).translate(1f, 1f, -2f);
+        var back = new org.joml.Matrix4f(ms.peek().getPositionMatrix()).translate(1f, 1f, 2f);
         tr.draw(text, x, y, shadow, false, back, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
         tr.draw(text, x, y, color, false, ms.peek().getPositionMatrix(), vcp, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, 0xF000F0);
     }

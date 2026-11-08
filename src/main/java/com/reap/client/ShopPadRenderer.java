@@ -128,10 +128,7 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
     }
 
     private void draw2(String text, float y, int color, org.joml.Matrix4f mat, VertexConsumerProvider vcp) {
-        float x = -tr.getWidth(text) / 2f;
-        int faint = (color & 0x00FFFFFF) | 0x20000000;
-        tr.draw(text, x, y, faint, false, mat, vcp, TextRenderer.TextLayerType.SEE_THROUGH, 0x66000000, 0xF000F0);
-        tr.draw(text, x, y, color, false, mat, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
+        WorldText.draw(tr, text, -tr.getWidth(text) / 2f, y, color, 0x66000000, mat, vcp);
     }
 
     @Override
