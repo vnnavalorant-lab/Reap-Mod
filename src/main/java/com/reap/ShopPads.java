@@ -47,6 +47,13 @@ public final class ShopPads {
                         .formatted(Formatting.GRAY), true);
                 continue;
             }
+            if (pad.tier != d.reapTier + 1) { // compras em ordem: só a Reap seguinte
+                p.sendMessage(Text.literal("Compre as Reaps em ordem: a próxima é a " + Reaps.get(d.reapTier + 1).namePt() + ".")
+                        .formatted(Formatting.RED, Formatting.BOLD), true);
+                w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENTITY_VILLAGER_NO,
+                        SoundCategory.PLAYERS, 0.8f, 1f);
+                continue;
+            }
             if (d.wins < t.cost()) {
                 long falta = t.cost() - d.wins;
                 p.sendMessage(Text.literal("Faltam " + falta + (falta == 1 ? " win" : " wins") + " para a Reap " + t.namePt() + "!")

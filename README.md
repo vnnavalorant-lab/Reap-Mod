@@ -41,8 +41,7 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   - Cada plataforma/grupo mostra o letreiro flutuante "Return +N WINS".
 - **Loja de Reaps** (`reap:shop_1` .. `reap:shop_10`, aba Blocos de Construção): plataforma vermelha com uma colher giratória na cor da Reap e o letreiro
   "N Wins / xV Speed / Buy". Ao **pisar** nela o jogador gasta os wins e **equipa aquela Reap**: colher e rastro mudam de cor e a
-  **velocidade de destruição** (`ReapData.bitePower()`) é multiplicada. Só compra Reap melhor que a atual (pode pular níveis); o letreiro mostra
-  Buy / Need N more / Owned / Equipped. Para tentar de novo é preciso sair da plataforma e pisar outra vez. A tabela está em `Reaps.java`:
+  **velocidade de destruição** (`ReapData.bitePower()`) é multiplicada. As compras são **em ordem**: só dá para comprar a Reap seguinte à atual. A plataforma de uma Reap já comprada fica **azul** (visual por jogador) e sem texto; só a plataforma da Reap seguinte mostra o custo, quanto de velocidade ela adiciona e Buy / Need N more (as mais distantes ficam sem texto). Para tentar de novo é preciso sair da plataforma e pisar outra vez. A tabela está em `Reaps.java`:
 
   | Bloco | Reap | Custo | Velocidade |
   |---|---|---|---|

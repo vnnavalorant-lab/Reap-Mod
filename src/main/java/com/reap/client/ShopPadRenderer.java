@@ -14,11 +14,15 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
 
 /** Loja de Reap: colher giratória (na cor da Reap) e letreiro "N Wins / xV Speed / Buy" sobre a plataforma. */
 public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> {
+    /** Textura azul da plataforma (a mesma da plataforma de retorno azul). */
+    private static final Identifier BLUE = new Identifier("reap", "textures/block/return_300.png");
+
     private final TextRenderer tr;
 
     public ShopPadRenderer(TextRenderer tr) {
@@ -54,23 +58,36 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
         // estado para o jogador local
         MinecraftClient mc = MinecraftClient.getInstance();
         ReapData d = mc.player == null ? null : ClientData.MAP.get(mc.player.getUuid());
+        int cur = d == null ? 0 : d.reapTier;
+
+        // Reap já comprada: a plataforma fica azul (só para quem comprou) e sem texto
+        if (cur >= pad.tier) {
+            MatrixStack.Entry e = ms.peek();
+            VertexConsumer bv = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(BLUE));
+            float y = 3f / 16f + 0.002f, lo = 1f / 16f, hi = 15f / 16f;
+            int lt = LightmapTextureManager.MAX_LIGHT_COORDINATE;
+            quadVertex(bv, e, lo, y, lo, 0f, 0f, lt);
+            quadVertex(bv, e, lo, y, hi, 0f, 1f, lt);
+            quadVertex(bv, e, hi, y, hi, 1f, 1f, lt);
+            quadVertex(bv, e, hi, y, lo, 1f, 0f, lt);
+            return;
+        }
+        // só a Reap seguinte mostra custo e quanto de velocidade ela adiciona; as mais distantes ficam sem texto
+        if (pad.tier != cur + 1) return;
+
+        int costColor = d != null && d.wins < t.cost() ? 0xFFFF8A8A : 0xFFFFC21A;
         String status;
         int statusColor;
-        int costColor = 0xFFFFC21A;
-        if (d != null && d.reapTier >= pad.tier) {
-            boolean equipped = d.reapTier == pad.tier;
-            status = equipped ? "Equipped" : "Owned";
-            statusColor = equipped ? 0xFF4FC3FF : 0xFFAAAAAA;
-        } else if (d != null && d.wins < t.cost()) {
+        if (d != null && d.wins < t.cost()) {
             status = "Need " + (t.cost() - d.wins) + " more";
             statusColor = 0xFFFF5555;
-            costColor = 0xFFFF8A8A;
         } else {
             status = "Buy";
             statusColor = 0xFF3CFF3C;
         }
+        float add = t.speed() - Reaps.speed(cur);
         String cost = t.cost() + (t.cost() == 1 ? " Win" : " Wins");
-        String speed = Reaps.speedLabel(t.speed()) + " Speed";
+        String speed = "+" + Reaps.speedLabel(add) + " Speed";
 
         ms.push();
         ms.translate(0.5, 2.55, 0.5);
@@ -82,6 +99,11 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
         draw2(speed, 0, 0xFFFFFFFF, mat, vcp);
         draw2(status, 11, statusColor, mat, vcp);
         ms.pop();
+    }
+
+    private static void quadVertex(VertexConsumer vc, MatrixStack.Entry e, float x, float y, float z, float u, float v, int light) {
+        vc.vertex(e.getPositionMatrix(), x, y, z).color(255, 255, 255, 255).texture(u, v)
+                .overlay(OverlayTexture.DEFAULT_UV).light(light).normal(e.getNormalMatrix(), 0f, 1f, 0f).next();
     }
 
     /** Dados falsos só para reaproveitar a cor arco-íris da Palette. */
