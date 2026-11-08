@@ -44,8 +44,14 @@ public class ReapData {
     /** Começa com 1 colher e ganha +1 a cada 2 rebirths (nível não dá mais colher). */
     public int spoons() { return Math.min(MAX_SPOONS, 1 + rebirths / 2); }
 
-    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths e a Reap equipada (velocidade de destruição). */
-    public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier); }
+    /** Divisor da Força (moedas): quanto maior, menos a Força acelera a colher. Bônus = sqrt(moedas) / COIN_DIV. */
+    public static final double COIN_DIV = 25.0;
+
+    /** Multiplicador de velocidade de destruição vindo da Força (moedas): mais Força = colher mais rápida (cresce com raiz quadrada). */
+    public float coinFactor() { return (float) (1.0 + Math.sqrt(Math.max(0L, coins)) / COIN_DIV); }
+
+    /** Quanto de "vida" da gelatina cada colher tira por tick de contato. Sobe com o nível, os rebirths, a Força (moedas) e a Reap equipada (velocidade de destruição). */
+    public float bitePower() { return (1f + 0.25f * (level - 1)) * strengthFactor(rebirths) * Reaps.speed(reapTier) * coinFactor(); }
 
     /** Rebirth em que ganha a próxima colher (de 2 em 2). */
     public int nextSpoonRebirth() { return (rebirths / 2 + 1) * 2; }

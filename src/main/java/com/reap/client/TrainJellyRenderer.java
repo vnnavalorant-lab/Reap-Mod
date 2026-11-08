@@ -80,12 +80,21 @@ public class TrainJellyRenderer implements BlockEntityRenderer<TrainJellyBlockEn
         ms.scale(-s, -s, s);
         String top = t.label();
         String mult = ReapMod.multLabel(t.mult());
-        tr.draw(top, -tr.getWidth(top) / 2f, -18, locked ? 0xFFFF5555 : 0xFF55FF55, true,
-                ms.peek().getPositionMatrix(), vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
+        label(top, -tr.getWidth(top) / 2f, -18, locked ? 0xFFFF5555 : 0xFF55FF55, ms, vcp);
         ms.scale(1.6f, 1.6f, 1f);
-        tr.draw(mult, -tr.getWidth(mult) / 2f, -6, 0xFFFFFFFF, true,
-                ms.peek().getPositionMatrix(), vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
+        label(mult, -tr.getWidth(mult) / 2f, -6, 0xFFFFFFFF, ms, vcp);
         ms.pop();
+    }
+
+    /**
+     * Texto com sombra desenhada manualmente: a sombra do vanilla fica quase no mesmo plano do texto e, de longe,
+     * "ganha" no depth test (sombra na frente). Aqui a sombra é empurrada para trás, longe o bastante do texto.
+     */
+    private void label(String text, float x, float y, int color, MatrixStack ms, VertexConsumerProvider vcp) {
+        int shadow = 0xFF000000 | ((color & 0xFCFCFC) >> 2);
+        var back = new org.joml.Matrix4f(ms.peek().getPositionMatrix()).translate(1f, 1f, -1.2f);
+        tr.draw(text, x, y, shadow, false, back, vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
+        tr.draw(text, x, y, color, false, ms.peek().getPositionMatrix(), vcp, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
     }
 
     @Override

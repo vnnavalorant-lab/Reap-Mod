@@ -68,16 +68,9 @@ public final class Hud {
         String xp = d.xp + "/" + need;
         g.drawTextWithShadow(tr, xp, bx + bw - 4 - (tr.getWidth(xp) - 1), by + 3, 0xFFFFFFFF);
 
-        // rebirths / multiplicador
-        g.drawTextWithShadow(tr, "Rebirths: " + d.rebirths, 6, H / 2 - 8, 0xFFFFD43B);
-        g.drawTextWithShadow(tr, "Multiplier: x" + d.multiplier(), 6, H / 2 + 4, 0xFF4FC3FF);
-        Reaps.Tier reap = Reaps.get(d.reapTier);
-        g.drawTextWithShadow(tr, "Reap: " + reap.name() + " (" + Reaps.speedLabel(reap.speed()) + " speed)", 6, H / 2 + 16,
-                0xFF000000 | (d.reapTier == 0 ? 0xFFFFFF : reap.rgb()));
-
-        // botão de Rebirth (tecla / /reap rebirth): ícone HD + "!" quando dá para renascer
+        // botão de Rebirth (tecla / /reap rebirth): ícone HD + "!" quando dá para renascer; a tecla fica ao lado direito do ícone
+        int ix = 6, sz = 34, iy = H / 2 - 62;
         {
-            int ix = 6, iy = H / 2 - 44, sz = 26;
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             g.drawTexture(REBIRTH_ICON, ix, iy, sz, sz, 0, 0, 64, 64, 64, 64);
@@ -88,9 +81,16 @@ public final class Hud {
                 g.drawTextWithShadow(tr, "!", ix + sz - 5, iy + 1, 0xFFFFFFFF);
             }
             String key = ReapClient.REBIRTH_KEY == null ? "R" : ReapClient.REBIRTH_KEY.getBoundKeyLocalizedText().getString();
-            String label = "[" + key + "]";
-            g.drawTextWithShadow(tr, label, ix + sz / 2 - (tr.getWidth(label) - 1) / 2, iy + sz + 2, 0xFFCCCCCC);
+            g.drawTextWithShadow(tr, "[" + key + "]", ix + sz + 5, iy + sz / 2 - 4, 0xFFCCCCCC);
         }
+
+        // rebirths / multiplicador / reap (com mais espaço entre as linhas)
+        int ty0 = iy + sz + 8;
+        g.drawTextWithShadow(tr, "Rebirths: " + d.rebirths, 6, ty0, 0xFFFFD43B);
+        g.drawTextWithShadow(tr, "Multiplier: x" + d.multiplier(), 6, ty0 + 16, 0xFF4FC3FF);
+        Reaps.Tier reap = Reaps.get(d.reapTier);
+        g.drawTextWithShadow(tr, "Reap: " + reap.name() + " (" + Reaps.speedLabel(reap.speed()) + " speed)", 6, ty0 + 32,
+                0xFF000000 | (d.reapTier == 0 ? 0xFFFFFF : reap.rgb()));
 
         // LEVEL UP!
         long el = System.currentTimeMillis() - ClientData.levelUpAt;

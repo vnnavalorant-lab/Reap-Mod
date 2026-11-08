@@ -12,6 +12,18 @@ import net.minecraft.text.Text;
 public final class ReapCommands {
     private ReapCommands() {}
 
+    /** Zera a Força (moedas) do jogador; ele perde o bônus de velocidade que ela dava. */
+    private static void resetStrength(ServerCommandSource src, java.util.Collection<ServerPlayerEntity> targets) {
+        ReapState st = ReapState.get(src.getServer());
+        for (ServerPlayerEntity t : targets) {
+            st.get(t.getUuid()).coins = 0;
+            ReapMod.markSync(src.getServer(), t.getUuid());
+            t.sendMessage(Text.literal("Sua Força foi zerada."), false);
+        }
+        int n = targets.size();
+        src.sendFeedback(() -> Text.literal("Força zerada para " + n + (n == 1 ? " jogador." : " jogadores.")), true);
+    }
+
     /** Reseta a loja: o jogador volta para a primeira Reap (os wins não são devolvidos). */
     private static void resetShop(ServerCommandSource src, java.util.Collection<ServerPlayerEntity> targets) {
         ReapState st = ReapState.get(src.getServer());
@@ -83,6 +95,17 @@ public final class ReapCommands {
                         .then(CommandManager.argument("players", EntityArgumentType.players()).executes(c -> {
                             java.util.Collection<ServerPlayerEntity> targets = EntityArgumentType.getPlayers(c, "players");
                             resetShop(c.getSource(), targets);
+                            return targets.size();
+                        })))
+                .then(CommandManager.literal("resetstrength").requires(s -> s.hasPermissionLevel(2))
+                        .executes(c -> {
+                            ServerPlayerEntity p = c.getSource().getPlayerOrThrow();
+                            resetStrength(c.getSource(), java.util.List.of(p));
+                            return 1;
+                        })
+                        .then(CommandManager.argument("players", EntityArgumentType.players()).executes(c -> {
+                            java.util.Collection<ServerPlayerEntity> targets = EntityArgumentType.getPlayers(c, "players");
+                            resetStrength(c.getSource(), targets);
                             return targets.size();
                         })))
                 .then(CommandManager.literal("setrebirths").requires(s -> s.hasPermissionLevel(2))

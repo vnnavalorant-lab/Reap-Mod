@@ -57,7 +57,7 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   | `shop_9` | Vermelha | 60 | x18 |
   | `shop_10` | Arco-íris | **80** | x25 |
 
-  **Rebirth zera a Reap** do jogador (volta para a branca, junto com os wins) e a progressão da loja recomeça. `/reap setreap <0-10>` (OP) para testar e `/reap resetshop [jogadores]` (OP) para resetar a loja (volta para a primeira Reap; wins não são devolvidos).
+  **Rebirth zera a Reap** do jogador (volta para a branca, junto com os wins) e a progressão da loja recomeça. `/reap setreap <0-10>` (OP) para testar. `/reap resetshop [jogadores]` (OP) reseta a loja (volta para a primeira Reap; wins não são devolvidos).
   Para mudar preços/velocidades/cores edite `Reaps.TIERS` (e `SHOP` em `tools/gen_assets.py` se mudar nomes/custos dos blocos).
 - **Gelatinas de Treino** (`reap:train_starter`, `train_r1`, `train_r3`, `train_r5`, `train_r6`): **grandes como no jogo original**
   (gelatina de ~2 blocos de largura e 1,8 de altura sobre uma placa ~3,3x3,3). Ao colocar o bloco ele ocupa uma área livre de **2x2x2**
@@ -77,6 +77,7 @@ O workflow `.github/workflows/build.yml` compila a cada push (ou manualmente em 
   XP por contato de colher = `(1 + nível/3) * multiplicador` (`TRAIN_XP_BASE` / `TRAIN_XP_PER_LEVEL` em `ReapMod.java`).
 - Colheres também ferem mobs/jogadores (PvP respeita server.properties).
 - Comandos: `/reap` (status), `/reap toggle`, `/reap rebirth` (nível 50), `/reap setlevel <n>` e `/reap setrebirths <n>` e `/reap setwins <n>` (OP).
+- **Força** (o contador de moedas no HUD) acelera a colher: bônus de velocidade de destruição = `1 + sqrt(moedas) / 25` (`ReapData.COIN_DIV`). `/reap resetstrength [jogadores]` (OP) zera a Força.
 - Cor da colher/rastro vem da Reap equipada na loja (volta à branca no rebirth).
 
 ## Ajustes rápidos
