@@ -56,7 +56,7 @@ public final class ShopPads {
             }
             if (d.wins < t.cost()) {
                 long falta = t.cost() - d.wins;
-                p.sendMessage(Text.literal("Faltam " + falta + (falta == 1 ? " win" : " wins") + " para a Reap " + t.namePt() + "!")
+                p.sendMessage(Text.literal("Faltam " + Reaps.abbrev(falta) + (falta == 1 ? " win" : " wins") + " para a Reap " + t.namePt() + "!")
                         .formatted(Formatting.RED, Formatting.BOLD), true);
                 w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENTITY_VILLAGER_NO,
                         SoundCategory.PLAYERS, 0.8f, 1f);

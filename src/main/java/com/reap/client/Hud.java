@@ -113,9 +113,6 @@ public final class Hud {
     }
 
     private static String fmt(long v) {
-        if (v >= 1_000_000_000L) return String.format("%.2fB", v / 1e9);
-        if (v >= 1_000_000L) return String.format("%.2fM", v / 1e6);
-        if (v >= 1_000L) return String.format("%.2fK", v / 1e3);
-        return Long.toString(v);
+        return Reaps.abbrev(v);
     }
 }

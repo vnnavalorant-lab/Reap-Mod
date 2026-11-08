@@ -82,14 +82,14 @@ public class ShopPadRenderer implements BlockEntityRenderer<ShopPadBlockEntity> 
         String status;
         int statusColor;
         if (d != null && d.wins < t.cost()) {
-            status = "Need " + (t.cost() - d.wins) + " more";
+            status = "Need " + Reaps.abbrev(t.cost() - d.wins) + " more";
             statusColor = 0xFFFF5555;
         } else {
             status = "Buy";
             statusColor = 0xFF3CFF3C;
         }
         float add = t.speed() - Reaps.speed(cur);
-        String cost = t.cost() + (t.cost() == 1 ? " Win" : " Wins");
+        String cost = Reaps.abbrev(t.cost()) + (t.cost() == 1 ? " Win" : " Wins");
         String speed = "+" + Reaps.speedLabel(add) + " Speed";
 
         ms.push();

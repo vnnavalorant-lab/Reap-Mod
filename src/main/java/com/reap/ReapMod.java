@@ -111,7 +111,7 @@ public class ReapMod implements ModInitializer {
     public static final float TRAIN_XP_PER_LEVEL = 1f / 3f;
 
     public static String multLabel(float m) {
-        return m == Math.floor(m) ? "x" + (int) m : "x" + m;
+        return Reaps.speedLabel(m);
     }
 
     private record Regen(RegistryKey<World> dim, BlockPos pos, long at, int tier) {}

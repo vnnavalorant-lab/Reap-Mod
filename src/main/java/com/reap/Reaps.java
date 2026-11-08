@@ -43,7 +43,24 @@ public final class Reaps {
         return get(i).speed();
     }
 
+    /** "x1.5", "x12", "x0.4": arredonda a 2 casas e tira zeros (evita erro de float como x0.4000001). */
     public static String speedLabel(float m) {
-        return m == Math.floor(m) ? "x" + (int) m : "x" + m;
+        return "x" + num(m);
+    }
+
+    /** Decimal curto: até 2 casas, sem zeros sobrando (0.4000001 -> 0.4; 12.0 -> 12). */
+    public static String num(double v) {
+        String s = java.math.BigDecimal.valueOf(v).setScale(2, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString();
+        return s;
+    }
+
+    /** Inteiro abreviado: 950, 1.7K, 3.2K, 12.5K, 1.2M, 3.4B (até 2 casas, sem zeros sobrando). */
+    public static String abbrev(long v) {
+        long a = Math.abs(v);
+        if (a >= 1_000_000_000L) return num(v / 1e9) + "B";
+        if (a >= 1_000_000L) return num(v / 1e6) + "M";
+        if (a >= 1_000L) return num(v / 1e3) + "K";
+        return Long.toString(v);
     }
 }
